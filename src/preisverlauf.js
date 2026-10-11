@@ -90,7 +90,8 @@
 
     function isPriceOnly(text) {
         const t = text.trim();
-        return t.length > 0 && /€|zu verschenken/i.test(t) && t.replace(pricePartsRe, '').replace(/\s+/g, '') === '';
+        // „VB“ allein (Verhandlungsbasis ohne Betrag) zählt auch als Preis
+        return t.length > 0 && (/€|zu verschenken/i.test(t) || /^vb$/i.test(t)) && t.replace(pricePartsRe, '').replace(/\s+/g, '') === '';
     }
 
     // Text eines Elements ohne die Buttons anderer Module ("Melden", "Ausblenden")

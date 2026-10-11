@@ -339,7 +339,8 @@
 
     function renderTab() {
         const total = searches.reduce((n, s) => n + (s.url === currentKey ? 0 : s.count), 0);
-        tab.replaceChildren(el('span', {}, '★ Suchen'), total ? el('span', { className: 'kss-tab-count' }, String(total)) : null);
+        // Ohne neue Anzeigen keine Zahl (replaceChildren würde null als Text "null" einsetzen)
+        tab.replaceChildren(...[el('span', {}, '★ Suchen'), total ? el('span', { className: 'kss-tab-count' }, String(total)) : null].filter(Boolean));
         tab.setAttribute('aria-expanded', String(settings.open));
         tab.hidden = settings.open;
         if (!tab.isConnected) document.body.appendChild(tab);

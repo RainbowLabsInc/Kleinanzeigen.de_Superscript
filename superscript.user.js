@@ -5,7 +5,7 @@
 // @author        RainbowlabsInc
 // @copyright     2026, RainbowlabsInc
 // @license       MIT
-// @version       0.2.2
+// @version       0.2.3
 // @icon          https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/assets/icon48.png
 // @homepage      https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript
 // @updateURL     https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/superscript.user.js
@@ -47,7 +47,7 @@
 (function () {
     'use strict';
 
-    const VERSION = '0.2.2';
+    const VERSION = '0.2.3';
 
     // Läuft auf der Startseite und auf Seiten unter /s-… (siehe @match).
     // Nur auf kleinanzeigen.de laufen – zusätzlich zu @match, falls der Script-Manager
@@ -312,10 +312,10 @@
     // ------------------------------------------------------------------
 
 // ========================================================================
-// Modul „Anzeige melden“ 0.4.4: vendor/anzeige-melden.user.js
+// Modul „Anzeige melden“ 0.4.5: vendor/anzeige-melden.user.js
 // Unverändert übernommen aus https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden
 // ========================================================================
-KS.module("melden", {"label":"Anzeige melden","version":"0.4.4","description":"Button „Melden“ neben dem Preis: Anzeigen direkt aus der Übersicht melden, mit eigenen Bausteinen.","guard":"data-klm-variant","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden"}, function () {
+KS.module("melden", {"label":"Anzeige melden","version":"0.4.5","description":"Button „Melden“ neben dem Preis: Anzeigen direkt aus der Übersicht melden, mit eigenen Bausteinen.","guard":"data-klm-variant","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden"}, function () {
 /*
  * Funktionsweise
  * --------------
@@ -657,6 +657,7 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.4","description":"B
             .klm-price-row { display: flex !important; align-items: center; flex-wrap: wrap; gap: 8px; }
             /* Wrapper: der Button darin ist ein atomares Inline-Element und erbt so keine Link-Unterstreichung der Karte */
             .klm-wrap { margin-left: auto; display: block; }
+            .kx-btn-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin: 6px 0 0; }
             .klm-btn {
                 display: inline-flex; align-items: center; gap: 6px;
                 padding: 4px 12px; border-radius: 999px;
@@ -802,7 +803,8 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.4","description":"B
 
     function isPriceOnly(text) {
         const t = text.trim();
-        return t.length > 0 && /€|zu verschenken/i.test(t) && t.replace(pricePartsRe, '').replace(/\s+/g, '') === '';
+        // „VB“ allein (Verhandlungsbasis ohne Betrag) zählt auch als Preis
+        return t.length > 0 && (/€|zu verschenken/i.test(t) || /^vb$/i.test(t)) && t.replace(pricePartsRe, '').replace(/\s+/g, '') === '';
     }
 
     // Buttons dieses und anderer Scripts (Nutzer ausblenden, Superscript) beim Lesen des Preises
@@ -838,6 +840,23 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.4","description":"B
         return row;
     }
 
+    // Rückfall ohne Preiszeile (z. B. „VB“ ohne Betrag oder „Zu verschenken“ auf der Startseite,
+    // wo die Karte dann keinen Preis zeigt): eigene Button-Zeile unter dem Titel. Die Zeile
+    // (.kx-btn-row) teilen sich „Anzeige melden“ und „Nutzer ausblenden“, damit beide Buttons
+    // nebeneinander stehen.
+    function buttonRowFallback(card) {
+        const existing = card.querySelector('.kx-btn-row');
+        if (existing) return existing;
+        const title = card.querySelector('h2, h3, .text-module-begin a, .ellipsis');
+        if (!title) return null;
+        const link = title.closest('a');
+        const anchor = link && link !== card && card.contains(link) ? link : title;
+        const row = document.createElement('div');
+        row.className = 'kx-btn-row';
+        anchor.insertAdjacentElement('afterend', row);
+        return row;
+    }
+
     function injectButtons() {
         const reported = loadReported();
         ensureOverviewStyles();
@@ -848,7 +867,7 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.4","description":"B
             const info = getCardInfo(card);
             if (!info.href || !info.adId) return;
 
-            const row = findPriceRow(card);
+            const row = findPriceRow(card) || buttonRowFallback(card);
             if (!row) return;
             card.dataset.klmInjected = 'true';
             // Aktueller Preis = erstes reines Preis-Element (ohne durchgestrichenen Altpreis)
@@ -1385,10 +1404,10 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.4","description":"B
 });
 
 // ========================================================================
-// Modul „Nutzer ausblenden“ 0.3.3: vendor/nutzer-ausblenden.user.js
+// Modul „Nutzer ausblenden“ 0.3.4: vendor/nutzer-ausblenden.user.js
 // Unverändert übernommen aus https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden
 // ========================================================================
-KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.3","description":"Button „Ausblenden“ neben dem Preis: Anbieter blockieren, einzelne Anzeigen ausblenden, Listen teilen und abonnieren.","guard":"data-kua","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden"}, function () {
+KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","description":"Button „Ausblenden“ neben dem Preis: Anbieter blockieren, einzelne Anzeigen ausblenden, Listen teilen und abonnieren.","guard":"data-kua","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden"}, function () {
 /*
  * Funktionsweise
  * --------------
@@ -1430,7 +1449,7 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.3","descript
 (function () {
     'use strict';
 
-    const VERSION = '0.3.3';
+    const VERSION = '0.3.4';
 
     const CONFIG = {
         keys: {
@@ -2084,6 +2103,7 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.3","descript
             [data-kua-state="collapsed"] { min-height: 0 !important; height: auto !important; }
             .kua-price-row { display: flex !important; align-items: center; flex-wrap: wrap; gap: 8px; }
             .kua-wrap { margin-left: auto; display: block; }
+            .kx-btn-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin: 6px 0 0; }
             .klm-price-row .klm-wrap + .kua-wrap, .kua-price-row .kua-wrap + .klm-wrap { margin-left: 0; }
             .kua-btn {
                 display: inline-flex; align-items: center; gap: 5px;
@@ -2428,7 +2448,8 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.3","descript
 
     function isPriceOnly(text) {
         const t = text.trim();
-        return t.length > 0 && /€|zu verschenken/i.test(t) && t.replace(pricePartsRe, '').replace(/\s+/g, '') === '';
+        // „VB“ allein (Verhandlungsbasis ohne Betrag) zählt auch als Preis
+        return t.length > 0 && (/€|zu verschenken/i.test(t) || /^vb$/i.test(t)) && t.replace(pricePartsRe, '').replace(/\s+/g, '') === '';
     }
 
     // Buttons dieses und anderer Scripts (Anzeige melden, Superscript) beim Lesen des Preises
@@ -2454,6 +2475,23 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.3","descript
         while (row.parentElement && row.parentElement !== card && isPriceOnly(textWithoutUi(row.parentElement))) {
             row = row.parentElement;
         }
+        return row;
+    }
+
+    // Rückfall ohne Preiszeile (z. B. „VB“ ohne Betrag oder „Zu verschenken“ auf der Startseite,
+    // wo die Karte dann keinen Preis zeigt): eigene Button-Zeile unter dem Titel. Die Zeile
+    // (.kx-btn-row) teilen sich „Anzeige melden“ und „Nutzer ausblenden“, damit beide Buttons
+    // nebeneinander stehen.
+    function buttonRowFallback(card) {
+        const existing = card.querySelector('.kx-btn-row');
+        if (existing) return existing;
+        const title = card.querySelector('h2, h3, .text-module-begin a, .ellipsis');
+        if (!title) return null;
+        const link = title.closest('a');
+        const anchor = link && link !== card && card.contains(link) ? link : title;
+        const row = document.createElement('div');
+        row.className = 'kx-btn-row';
+        anchor.insertAdjacentElement('afterend', row);
         return row;
     }
 
@@ -2497,7 +2535,7 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.3","descript
         // Button neben dem Preis – erneut einsetzen, falls die Seite die Karte neu aufgebaut hat
         const wrap = card.querySelector(':scope .kua-wrap');
         if (!wrap) {
-            const row = findPriceRow(card);
+            const row = findPriceRow(card) || buttonRowFallback(card);
             if (row) {
                 row.classList.add('kua-price-row');
                 row.appendChild(el('span', { className: 'kua-ui kua-wrap' }, cardButton(info)));
@@ -3276,10 +3314,10 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.3","descript
 });
 
 // ========================================================================
-// Modul „Preisverlauf & Gesehen“ 0.2.2: src/preisverlauf.js
+// Modul „Preisverlauf & Gesehen“ 0.2.3: src/preisverlauf.js
 // Nur im Superscript
 // ========================================================================
-KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.2","description":"Preisänderungen, „Neu“ seit dem letzten Besuch einer Suche und schon gesehene Anzeigen markieren."}, function () {
+KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.3","description":"Preisänderungen, „Neu“ seit dem letzten Besuch einer Suche und schon gesehene Anzeigen markieren."}, function () {
 /*
  * Modul: Preisverlauf & Gesehen
  * -----------------------------
@@ -3372,7 +3410,8 @@ KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.2","d
 
     function isPriceOnly(text) {
         const t = text.trim();
-        return t.length > 0 && /€|zu verschenken/i.test(t) && t.replace(pricePartsRe, '').replace(/\s+/g, '') === '';
+        // „VB“ allein (Verhandlungsbasis ohne Betrag) zählt auch als Preis
+        return t.length > 0 && (/€|zu verschenken/i.test(t) || /^vb$/i.test(t)) && t.replace(pricePartsRe, '').replace(/\s+/g, '') === '';
     }
 
     // Text eines Elements ohne die Buttons anderer Module ("Melden", "Ausblenden")
@@ -4037,10 +4076,10 @@ KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.2","d
 });
 
 // ========================================================================
-// Modul „Gespeicherte Suchen“ 0.2.2: src/suchen.js
+// Modul „Gespeicherte Suchen“ 0.2.3: src/suchen.js
 // Nur im Superscript
 // ========================================================================
-KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.2","description":"Sidebar mit eigenen, benannten Suchen zum schnellen Umschalten, optional mit Zähler für neue Anzeigen."}, function () {
+KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.3","description":"Sidebar mit eigenen, benannten Suchen zum schnellen Umschalten, optional mit Zähler für neue Anzeigen."}, function () {
 /*
  * Modul: Gespeicherte Suchen
  * --------------------------
@@ -4382,7 +4421,8 @@ KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.2","descriptio
 
     function renderTab() {
         const total = searches.reduce((n, s) => n + (s.url === currentKey ? 0 : s.count), 0);
-        tab.replaceChildren(el('span', {}, '★ Suchen'), total ? el('span', { className: 'kss-tab-count' }, String(total)) : null);
+        // Ohne neue Anzeigen keine Zahl (replaceChildren würde null als Text "null" einsetzen)
+        tab.replaceChildren(...[el('span', {}, '★ Suchen'), total ? el('span', { className: 'kss-tab-count' }, String(total)) : null].filter(Boolean));
         tab.setAttribute('aria-expanded', String(settings.open));
         tab.hidden = settings.open;
         if (!tab.isConnected) document.body.appendChild(tab);
