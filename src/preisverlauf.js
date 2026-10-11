@@ -6,11 +6,12 @@
  * Es stellt dafür keine Anfragen an Kleinanzeigen, sondern liest nur, was ohnehin auf der
  * Seite steht.
  *
- * 1. Übersicht (Suchergebnisse, Bestandslisten, /s-...): Unter dem Preis jeder Karte
+ * 1. Übersicht (Suchergebnisse, Bestandslisten, /s-..., und die Startseite): Unter dem Preis jeder Karte
  *    erscheinen kleine Markierungen:
  *      - „↓ vorher 120 €“ / „↑ vorher 95 €“, wenn sich der Preis seit dem letzten Sehen
  *        geändert hat (Klick: kompletter Verlauf mit Datum),
- *      - „Neu“ für Anzeigen, die bei deinem letzten Besuch derselben Suche noch nicht da waren,
+ *      - „Neu“ für Anzeigen, die bei deinem letzten Besuch derselben Suche noch nicht da waren
+ *        (nicht auf der Startseite, sie ist keine Suche),
  *      - „Gesehen“ / „Geöffnet“ für Anzeigen, die du schon kennst. Diese lassen sich
  *        zusätzlich abdunkeln (außer, ihr Preis hat sich gerade geändert).
  * 2. Anzeigenseite (/s-anzeige/...): merkt sich das Öffnen und den Preis; unter dem Preis
@@ -286,9 +287,11 @@
     // Beginn dieses Besuchs und des vorherigen (pro Tab im sessionStorage, damit Seite 2 und
     // Neuladen zum selben Besuch zählen)
     function beginVisit() {
+        const now = Date.now();
+        // Die Startseite ist keine Suche: dort kein „Neu“, nur „Gesehen“ und Preise
+        if (!path.startsWith('/s-')) return { start: now, prev: 0, touched: now };
         const key = KS.searchKey(window.location.href);
         const sk = CONFIG.visitKeyPrefix + key;
-        const now = Date.now();
         let v = null;
         try { v = JSON.parse(sessionStorage.getItem(sk) || 'null'); } catch (e) { v = null; }
         if (!isObj(v) || !num(v.start) || now - num(v.touched) > CONFIG.visitIdleMs) {

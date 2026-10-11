@@ -33,6 +33,8 @@ Wer auf Kleinanzeigen etwas Bestimmtes sucht, schaut oft tagelang dieselbe Suche
 
 Die beiden übernommenen Module sind **unverändert** die jeweils aktuelle Version der Einzel-Scripts. Deren Beschreibung und Bedienung findest du in den verlinkten Projekten.
 
+**Auch auf der Startseite:** Dort blendet die Blockliste Anzeigen blockierter Anbieter aus, der Preisverlauf markiert Preisänderungen und schon gesehene Anzeigen (ohne „Neu“, denn die Startseite ist keine Suche), und die Sidebar der gespeicherten Suchen ist da. Nur „Anzeige melden“ bleibt dort still, so wie das Einzel-Script, das nur auf Such- und Anzeigenseiten arbeitet.
+
 <p align="center">
   <img src="assets/vorschau-liste.png" alt="Suchergebnisse mit Markierungen: Preis gesenkt, Gesehen, Geöffnet, Neu; bekannte Anzeigen abgedunkelt" width="560">
   <br><sub>Zweiter Besuch derselben Suche (Darstellung an einer nachgebauten Seite): oben eine Preissenkung, in der Mitte zwei bekannte Anzeigen, abgedunkelt, unten eine neue.</sub>
@@ -135,7 +137,7 @@ Melden und Blockliste bedienst du wie gewohnt über ihre Buttons neben dem Preis
 
 | Situation | Was passiert |
 |---|---|
-| Suchergebnisse, Bestandslisten (`/s-…`) | Das Modul erkennt die Anzeigen-Karten über ihre Links auf `/s-anzeige/…`, wie die beiden anderen Module, und liest den Preis aus der Preiszeile. Ein durchgestrichener Altpreis und die Buttons „Melden“/„Ausblenden“ werden dabei übergangen. Nachgeladene Ergebnisse erfasst ein `MutationObserver`. |
+| Suchergebnisse, Bestandslisten (`/s-…`), Startseite | Das Modul erkennt die Anzeigen-Karten über ihre Links auf `/s-anzeige/…`, wie die beiden anderen Module, und liest den Preis aus der Preiszeile. Ein durchgestrichener Altpreis und die Buttons „Melden“/„Ausblenden“ werden dabei übergangen. Nachgeladene Ergebnisse erfasst ein `MutationObserver`. |
 | Preis gespeichert | Nur wenn er sich ändert (Betrag oder „VB“), mit Datum, höchstens 12 Änderungen pro Anzeige. |
 | „Gesehen“ | Eine Karte gilt als gesehen, sobald mindestens die Hälfte davon im sichtbaren Bereich war (`IntersectionObserver`). Was du nicht heruntergescrollt hast, bleibt „neu“. Eingeklappte Anzeigen blockierter Anbieter zählen nicht. |
 | „Neu“ und Besuche | Eine Suche wird an ihrer Adresse ohne Seitenzahl erkannt (`/s-seite:2/…`, `/…/seite:2/…`, `?pageNum=2`). Ein Besuch gilt pro Tab und endet nach 30 Minuten ohne Seitenaufruf. Seite 2, 3 … und Neuladen gehören zum selben Besuch. „Neu“ ist, was vor diesem Besuch noch nie gesehen wurde, sofern du die Suche schon einmal besucht hast. |
@@ -178,10 +180,11 @@ Ein neues Modul: Datei unter `src/` anlegen (eine Funktion, die sich selbst aufr
 
 | Umgebung | Stand |
 |---|---|
+| Chromium mit nachgebauten Seiten | ✅ Startseite: Anzeige eines blockierten Anbieters eingeklappt, Ausblenden-Buttons, Melden inaktiv, Sidebar ohne Speichern-Feld, Preise erfasst, kein „Neu“ |
 | Chromium mit nachgebauten Seiten | ✅ Gespeicherte Suchen: aufklappen, speichern mit Namensvorschlag, Sidebar bleibt beim Seitenwechsel offen, umbenennen, sortieren, löschen, Alt+2, Seite 2 als dieselbe Suche, Zähler (aus = keine Anfragen, nur andere Suchen, ausgeblendete Anzeigen nicht mitgezählt, höchstens stündlich, Besuch setzt zurück), Anzeigenseite |
 | Chromium mit nachgebauten Seiten | ✅ Preis erkennen (klassische und generische Karten, Altpreis, Dezimalpreis), Preissenkung, „Neu“, „Gesehen“, „Geöffnet“, Abdunkeln und Einstellungen dazu, Seite 2 im selben Besuch, Verlauf als Popover (ohne die Anzeige zu öffnen), Anzeigenseite (Verlauf unter dem Preis, Empfehlungen ignoriert), Modul abschalten, Einzel-Script parallel installiert, Melden- und Ausblenden-Buttons nebeneinander |
 | Live-Seite, Tampermonkey | ✅ 0.1.0 läuft; eine echte Preisänderung wurde noch nicht beobachtet |
-| Live-Seite, Tampermonkey | ⏳ Gespeicherte Suchen (0.2.0), insbesondere Namensvorschlag aus dem Suchfeld und Zähler |
+| Live-Seite, Tampermonkey | ⏳ 0.2.0: gespeicherte Suchen (Namensvorschlag aus dem Suchfeld, Zähler) und Startseite (Aufbau der Karten dort noch nicht geprüft) |
 | Firefox, Violentmonkey | ⏳ noch nicht getestet |
 
 Kleinanzeigen ändert sein Frontend regelmäßig. Funktioniert etwas nicht, hilft ein [Issue](https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/issues) mit einem Screenshot, dem Link zur Seite und dem HTML des betroffenen Elements (DevTools → Element → Rechtsklick → *Copy → Copy outerHTML*). Bitte **keine** Cookies, Tokens oder persönlichen Daten mitschicken. Fehler in „Anzeige melden“ oder „Nutzer ausblenden“ bitte im jeweiligen Projekt melden.
@@ -192,7 +195,7 @@ Kleinanzeigen ändert sein Frontend regelmäßig. Funktioniert etwas nicht, hilf
 
 | Version | Änderungen |
 |---|---|
-| **0.2.0** | Neues Modul „Gespeicherte Suchen“: Sidebar mit benannten Suchen, Umschalten per Klick oder Alt+1 … Alt+9, optionaler Zähler für neue Anzeigen |
+| **0.2.0** | Neues Modul „Gespeicherte Suchen“: Sidebar mit benannten Suchen, Umschalten per Klick oder Alt+1 … Alt+9, optionaler Zähler für neue Anzeigen. Superscript läuft jetzt auch auf der Startseite: Blockliste, Preisverlauf und Sidebar |
 | **0.1.0** | Erste Version: neues Modul „Preisverlauf & Gesehen“, dazu „Anzeige melden“ 0.4.2 und „Nutzer ausblenden“ 0.3.1; Module einzeln abschaltbar, Schutz gegen doppelt laufende Einzel-Scripts |
 
 ---
@@ -212,7 +215,7 @@ Kleinanzeigen ändert sein Frontend regelmäßig. Funktioniert etwas nicht, hilf
 * Der Preisverlauf zeigt nur, was du selbst gesehen hast. Änderungen zwischen zwei Besuchen sind nicht bekannt, und ein Verlauf ist keine Aussage von Kleinanzeigen.
 * Das Modul „Preisverlauf & Gesehen“ stellt keine Anfragen, weder an Kleinanzeigen noch an andere Server. „Gespeicherte Suchen“ lädt nur bei eingeschaltetem Zähler die erste Ergebnisseite deiner gespeicherten Suchen von Kleinanzeigen, wie beim normalen Öffnen. Was die Module „Anzeige melden“ und „Nutzer ausblenden“ senden, steht in deren Beschreibung.
 * Alle Daten liegen nur lokal im Speicher deines Userscript-Managers bzw. Browsers.
-* Es läuft **ausschließlich auf `https://www.kleinanzeigen.de`**, und dort nur auf Seiten unter `/s-…`. Auf allen anderen Websites ist es inaktiv.
+* Es läuft **ausschließlich auf `https://www.kleinanzeigen.de`**, und dort nur auf der Startseite und auf Seiten unter `/s-…`. Auf allen anderen Websites ist es inaktiv.
 
 ---
 

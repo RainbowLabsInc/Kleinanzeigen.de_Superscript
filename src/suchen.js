@@ -50,7 +50,8 @@
 
     const path = window.location.pathname;
     const isDetailPage = path.startsWith('/s-anzeige/');
-    const currentKey = isDetailPage ? null : KS.searchKey(window.location.href);
+    // Nur Such- und Listenseiten (/s-…) sind speicherbare Suchen, nicht die Startseite
+    const currentKey = path.startsWith('/s-') && !isDetailPage ? KS.searchKey(window.location.href) : null;
 
     // ------------------------------------------------------------------
     // Helfer

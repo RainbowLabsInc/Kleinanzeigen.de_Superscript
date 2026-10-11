@@ -10,6 +10,8 @@
 // @homepage      https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript
 // @updateURL     https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/superscript.user.js
 // @downloadURL   https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/superscript.user.js
+// @match         https://www.kleinanzeigen.de/
+// @match         https://www.kleinanzeigen.de/?*
 // @match         https://www.kleinanzeigen.de/s-*
 // @grant         GM_getValue
 // @grant         GM_setValue
@@ -47,6 +49,8 @@
 
     const VERSION = '0.2.0';
 
+    // Läuft auf der Startseite und auf Seiten unter /s-… (siehe @match). „Anzeige melden“
+    // prüft den Pfad selbst und bleibt auf der Startseite still.
     // Nur auf kleinanzeigen.de laufen – zusätzlich zu @match, falls der Script-Manager
     // die Header ignoriert oder das Script manuell mit breiteren Regeln eingebunden wird.
     if (window.location.protocol !== 'https:' || window.location.hostname !== 'www.kleinanzeigen.de') return;
@@ -3240,11 +3244,12 @@ KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.0","d
  * Es stellt dafür keine Anfragen an Kleinanzeigen, sondern liest nur, was ohnehin auf der
  * Seite steht.
  *
- * 1. Übersicht (Suchergebnisse, Bestandslisten, /s-...): Unter dem Preis jeder Karte
+ * 1. Übersicht (Suchergebnisse, Bestandslisten, /s-..., und die Startseite): Unter dem Preis jeder Karte
  *    erscheinen kleine Markierungen:
  *      - „↓ vorher 120 €“ / „↑ vorher 95 €“, wenn sich der Preis seit dem letzten Sehen
  *        geändert hat (Klick: kompletter Verlauf mit Datum),
- *      - „Neu“ für Anzeigen, die bei deinem letzten Besuch derselben Suche noch nicht da waren,
+ *      - „Neu“ für Anzeigen, die bei deinem letzten Besuch derselben Suche noch nicht da waren
+ *        (nicht auf der Startseite, sie ist keine Suche),
  *      - „Gesehen“ / „Geöffnet“ für Anzeigen, die du schon kennst. Diese lassen sich
  *        zusätzlich abdunkeln (außer, ihr Preis hat sich gerade geändert).
  * 2. Anzeigenseite (/s-anzeige/...): merkt sich das Öffnen und den Preis; unter dem Preis
@@ -3520,9 +3525,11 @@ KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.0","d
     // Beginn dieses Besuchs und des vorherigen (pro Tab im sessionStorage, damit Seite 2 und
     // Neuladen zum selben Besuch zählen)
     function beginVisit() {
+        const now = Date.now();
+        // Die Startseite ist keine Suche: dort kein „Neu“, nur „Gesehen“ und Preise
+        if (!path.startsWith('/s-')) return { start: now, prev: 0, touched: now };
         const key = KS.searchKey(window.location.href);
         const sk = CONFIG.visitKeyPrefix + key;
-        const now = Date.now();
         let v = null;
         try { v = JSON.parse(sessionStorage.getItem(sk) || 'null'); } catch (e) { v = null; }
         if (!isObj(v) || !num(v.start) || now - num(v.touched) > CONFIG.visitIdleMs) {
@@ -4042,7 +4049,8 @@ KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.0","descriptio
 
     const path = window.location.pathname;
     const isDetailPage = path.startsWith('/s-anzeige/');
-    const currentKey = isDetailPage ? null : KS.searchKey(window.location.href);
+    // Nur Such- und Listenseiten (/s-…) sind speicherbare Suchen, nicht die Startseite
+    const currentKey = path.startsWith('/s-') && !isDetailPage ? KS.searchKey(window.location.href) : null;
 
     // ------------------------------------------------------------------
     // Helfer

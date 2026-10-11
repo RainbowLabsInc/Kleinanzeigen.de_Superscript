@@ -10,6 +10,8 @@
 // @homepage      @@REPO@@
 // @updateURL     @@REPO@@/raw/main/superscript.user.js
 // @downloadURL   @@REPO@@/raw/main/superscript.user.js
+// @match         https://www.kleinanzeigen.de/
+// @match         https://www.kleinanzeigen.de/?*
 // @match         https://www.kleinanzeigen.de/s-*
 // @grant         GM_getValue
 // @grant         GM_setValue
