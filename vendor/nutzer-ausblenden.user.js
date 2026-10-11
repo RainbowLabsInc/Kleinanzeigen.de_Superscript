@@ -5,7 +5,7 @@
 // @author        RainbowlabsInc
 // @copyright     2026, RainbowlabsInc
 // @license       MIT
-// @version       0.3.2
+// @version       0.3.3
 // @icon          https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden/raw/main/assets/icon48.png
 // @homepage      https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden
 // @updateURL     https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden/raw/main/script.user.js
@@ -66,7 +66,7 @@
 (function () {
     'use strict';
 
-    const VERSION = '0.3.2';
+    const VERSION = '0.3.3';
 
     const CONFIG = {
         keys: {
@@ -398,7 +398,8 @@
                 const entry = found.get(id) || { id, name: '', el: a, count: 0 };
                 entry.count++;
                 const text = clip(a.textContent, CONFIG.nameMax);
-                if (!entry.name && text && !CONFIG.notAName.test(text)) {
+                // Profilbild mit Initiale ("K") ist kein Name: dort nicht den Button einsetzen
+                if (!entry.name && text.length > 1 && !CONFIG.notAName.test(text)) {
                     entry.name = text;
                     entry.el = a;
                 }
@@ -731,6 +732,13 @@
             .kua-btn:hover, .kua-btn:focus-visible { border-color: #1e1e1e; color: #1e1e1e; background: #f2f1ee; outline: none; }
             .kua-btn[data-state="blocked"] { border-color: #1e1e1e; background: #1e1e1e; color: #fff; }
             .kua-btn svg { flex: none; }
+            /* Anzeigenseite: nie strecken (der Anbieter-Kasten ist teils ein Flex-Layout), rot abgesetzt */
+            .kua-btn.kua-detail-btn {
+                flex: none !important; align-self: flex-start !important; width: auto !important; height: auto !important;
+                max-width: max-content; border-color: #c62828; color: #c62828; background: #fdecea;
+            }
+            .kua-btn.kua-detail-btn:hover, .kua-btn.kua-detail-btn:focus-visible { background: #c62828; border-color: #c62828; color: #fff; }
+            .kua-btn.kua-detail-btn[data-state="blocked"] { border-color: #1e1e1e; background: #1e1e1e; color: #fff; }
 
             .kua-note-bar {
                 display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px;
@@ -1059,14 +1067,27 @@
         return t.length > 0 && /€|zu verschenken/i.test(t) && t.replace(pricePartsRe, '').replace(/\s+/g, '') === '';
     }
 
+    // Buttons dieses und anderer Scripts (Anzeige melden, Superscript) beim Lesen des Preises
+    // ignorieren. Sonst findet das zweite Script die Preiszeile nicht mehr, sobald das erste seinen
+    // Button hineingesetzt hat, und setzt keinen Button.
+    const FOREIGN_UI = '.kua-ui, .klm-wrap, .kps-ui, .kss-ui';
+
+    function textWithoutUi(node) {
+        let text = node.textContent;
+        node.querySelectorAll(FOREIGN_UI).forEach(ui => { text = text.split(ui.textContent).join(''); });
+        return text;
+    }
+
     function findPriceRow(card) {
         const classic = card.querySelector('.aditem-main--middle--price-shipping');
         if (classic) return classic;
+        // Erstes reines Preis-Element: keine Kind-Elemente außer fremden Buttons, nur Preistext
         const first = Array.from(card.querySelectorAll('p, span, div, strong, b'))
-            .find(n => n.children.length === 0 && !n.closest('.kua-ui') && isPriceOnly(n.textContent));
+            .find(n => Array.from(n.children).every(c => c.matches(FOREIGN_UI))
+                && !n.closest(FOREIGN_UI) && isPriceOnly(textWithoutUi(n)));
         if (!first) return null;
         let row = first;
-        while (row.parentElement && row.parentElement !== card && isPriceOnly(row.parentElement.textContent)) {
+        while (row.parentElement && row.parentElement !== card && isPriceOnly(textWithoutUi(row.parentElement))) {
             row = row.parentElement;
         }
         return row;
@@ -1280,7 +1301,7 @@
         // Zwei Bedienelemente: ein Button am Anbieter-Namen und ein fester Button unten links.
         // Der feste Button hängt direkt am <body> und funktioniert auch dann, wenn die Seite
         // den Anbieter-Kasten neu aufbaut und den Button dort wieder entfernt.
-        const btn = guardedButton({ className: 'kua-ui kua-btn', style: 'margin-left:8px;vertical-align:middle',
+        const btn = guardedButton({ className: 'kua-ui kua-btn kua-detail-btn', style: 'margin-left:8px;vertical-align:middle',
             onclick: () => openPopover(info, btn) });
         const fab = el('button', { type: 'button', className: 'kua-ui kua-pill', onclick: () => openPopover(info, fab) });
         let barClosed = false;

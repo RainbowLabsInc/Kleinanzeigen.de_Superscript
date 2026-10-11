@@ -5,7 +5,7 @@
 // @author        RainbowlabsInc
 // @copyright     2026, RainbowlabsInc
 // @license       MIT
-// @version       0.2.1
+// @version       0.2.2
 // @icon          https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/assets/icon48.png
 // @homepage      https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript
 // @updateURL     https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/superscript.user.js
@@ -47,7 +47,7 @@
 (function () {
     'use strict';
 
-    const VERSION = '0.2.1';
+    const VERSION = '0.2.2';
 
     // Läuft auf der Startseite und auf Seiten unter /s-… (siehe @match).
     // Nur auf kleinanzeigen.de laufen – zusätzlich zu @match, falls der Script-Manager
@@ -312,10 +312,10 @@
     // ------------------------------------------------------------------
 
 // ========================================================================
-// Modul „Anzeige melden“ 0.4.3: vendor/anzeige-melden.user.js
+// Modul „Anzeige melden“ 0.4.4: vendor/anzeige-melden.user.js
 // Unverändert übernommen aus https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden
 // ========================================================================
-KS.module("melden", {"label":"Anzeige melden","version":"0.4.3","description":"Button „Melden“ neben dem Preis: Anzeigen direkt aus der Übersicht melden, mit eigenen Bausteinen.","guard":"data-klm-variant","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden"}, function () {
+KS.module("melden", {"label":"Anzeige melden","version":"0.4.4","description":"Button „Melden“ neben dem Preis: Anzeigen direkt aus der Übersicht melden, mit eigenen Bausteinen.","guard":"data-klm-variant","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden"}, function () {
 /*
  * Funktionsweise
  * --------------
@@ -642,13 +642,17 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.3","description":"B
             requestAnimationFrame(() => { scheduled = false; injectButtons(); });
         };
         injectButtons();
-        new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+        new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
 
         window.addEventListener('message', onPopupMessage);
     }
 
+    // Die Seite baut Teile des Dokuments nach dem Laden neu auf; dann die Styles erneut einhängen
+    const overviewStyle = document.createElement('style');
+    const ensureOverviewStyles = () => { if (!overviewStyle.isConnected) (document.head || document.documentElement).appendChild(overviewStyle); };
+
     function injectOverviewStyles() {
-        const style = document.createElement('style');
+        const style = overviewStyle;
         style.textContent = `
             .klm-price-row { display: flex !important; align-items: center; flex-wrap: wrap; gap: 8px; }
             /* Wrapper: der Button darin ist ein atomares Inline-Element und erbt so keine Link-Unterstreichung der Karte */
@@ -749,7 +753,7 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.3","description":"B
             .klm-hint { margin: 0; font-size: 12px; color: #6b6b6b; }
             .klm-hint code { font-size: 12px; background: #f2f1ee; padding: 0 3px; border-radius: 3px; }
         `;
-        document.head.appendChild(style);
+        ensureOverviewStyles();
     }
 
     function findAdCards() {
@@ -761,7 +765,10 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.3","description":"B
         // Generisch: vom Anzeigen-Link so weit nach oben laufen, wie der Container
         // nur Links auf genau diese eine Anzeige enthält -> das ist die Karte.
         document.querySelectorAll('a[href*="/s-anzeige/"]').forEach(link => {
-            if (link.closest('[data-klm-injected], article.aditem[data-adid]')) return;
+            if (link.closest('article.aditem[data-adid]')) return;
+            // Karte schon versorgt? Nur überspringen, solange ihr Button noch da ist
+            const done = link.closest('[data-klm-injected]');
+            if (done && done.querySelector('.klm-btn')) return;
             const adId = getAdIdFromUrl(link.href);
             if (!adId) return;
             let card = null;
@@ -798,20 +805,34 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.3","description":"B
         return t.length > 0 && /€|zu verschenken/i.test(t) && t.replace(pricePartsRe, '').replace(/\s+/g, '') === '';
     }
 
+    // Buttons dieses und anderer Scripts (Nutzer ausblenden, Superscript) beim Lesen des Preises
+    // ignorieren. Sonst findet das zweite Script die Preiszeile nicht mehr, sobald das erste seinen
+    // Button hineingesetzt hat, und setzt keinen Button.
+    const FOREIGN_UI = '.klm-wrap, .kua-ui, .kps-ui, .kss-ui';
+
+    function textWithoutUi(node) {
+        let text = node.textContent;
+        node.querySelectorAll(FOREIGN_UI).forEach(ui => { text = text.split(ui.textContent).join(''); });
+        return text;
+    }
+
+    // Reines Preis-Element: keine eigenen Kind-Elemente außer fremden Buttons, nur Preistext
+    const isPriceLeaf = (el) => Array.from(el.children).every(c => c.matches(FOREIGN_UI))
+        && !el.closest(FOREIGN_UI) && isPriceOnly(textWithoutUi(el));
+
     function findPriceRow(card) {
         // Klassisches Layout
         const classic = card.querySelector('.aditem-main--middle--price-shipping');
         if (classic) return classic;
 
         // Generisch: erstes Element, das nur aus Preistext besteht ...
-        const first = Array.from(card.querySelectorAll('p, span, div, strong, b'))
-            .find(el => el.children.length === 0 && isPriceOnly(el.textContent));
+        const first = Array.from(card.querySelectorAll('p, span, div, strong, b')).find(isPriceLeaf);
         if (!first) return null;
 
         // ... dann hoch bis zur Zeile, die noch ausschließlich Preise enthält
         // (z. B. "2 € VB" + durchgestrichener Altpreis "3.399 €"), aber keine km/EZ-Tags.
         let row = first;
-        while (row.parentElement && row.parentElement !== card && isPriceOnly(row.parentElement.textContent)) {
+        while (row.parentElement && row.parentElement !== card && isPriceOnly(textWithoutUi(row.parentElement))) {
             row = row.parentElement;
         }
         return row;
@@ -819,9 +840,11 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.3","description":"B
 
     function injectButtons() {
         const reported = loadReported();
+        ensureOverviewStyles();
 
         findAdCards().forEach(card => {
-            if (card.dataset.klmInjected) return;
+            // Schon da? Baut die Seite die Karte neu auf, fehlt der Button: dann neu einsetzen
+            if (card.dataset.klmInjected && card.querySelector('.klm-btn')) return;
             const info = getCardInfo(card);
             if (!info.href || !info.adId) return;
 
@@ -829,8 +852,8 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.3","description":"B
             if (!row) return;
             card.dataset.klmInjected = 'true';
             // Aktueller Preis = erstes reines Preis-Element (ohne durchgestrichenen Altpreis)
-            const priceEl = [row, ...row.querySelectorAll('*')].find(e => e.children.length === 0 && isPriceOnly(e.textContent)) || row;
-            info.price = priceEl.textContent.replace(/\s+/g, ' ').trim();
+            const priceEl = [row, ...row.querySelectorAll('*')].find(isPriceLeaf) || row;
+            info.price = textWithoutUi(priceEl).replace(/\s+/g, ' ').trim();
 
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -1362,10 +1385,10 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.3","description":"B
 });
 
 // ========================================================================
-// Modul „Nutzer ausblenden“ 0.3.2: vendor/nutzer-ausblenden.user.js
+// Modul „Nutzer ausblenden“ 0.3.3: vendor/nutzer-ausblenden.user.js
 // Unverändert übernommen aus https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden
 // ========================================================================
-KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.2","description":"Button „Ausblenden“ neben dem Preis: Anbieter blockieren, einzelne Anzeigen ausblenden, Listen teilen und abonnieren.","guard":"data-kua","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden"}, function () {
+KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.3","description":"Button „Ausblenden“ neben dem Preis: Anbieter blockieren, einzelne Anzeigen ausblenden, Listen teilen und abonnieren.","guard":"data-kua","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden"}, function () {
 /*
  * Funktionsweise
  * --------------
@@ -1407,7 +1430,7 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.2","descript
 (function () {
     'use strict';
 
-    const VERSION = '0.3.2';
+    const VERSION = '0.3.3';
 
     const CONFIG = {
         keys: {
@@ -1739,7 +1762,8 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.2","descript
                 const entry = found.get(id) || { id, name: '', el: a, count: 0 };
                 entry.count++;
                 const text = clip(a.textContent, CONFIG.nameMax);
-                if (!entry.name && text && !CONFIG.notAName.test(text)) {
+                // Profilbild mit Initiale ("K") ist kein Name: dort nicht den Button einsetzen
+                if (!entry.name && text.length > 1 && !CONFIG.notAName.test(text)) {
                     entry.name = text;
                     entry.el = a;
                 }
@@ -2072,6 +2096,13 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.2","descript
             .kua-btn:hover, .kua-btn:focus-visible { border-color: #1e1e1e; color: #1e1e1e; background: #f2f1ee; outline: none; }
             .kua-btn[data-state="blocked"] { border-color: #1e1e1e; background: #1e1e1e; color: #fff; }
             .kua-btn svg { flex: none; }
+            /* Anzeigenseite: nie strecken (der Anbieter-Kasten ist teils ein Flex-Layout), rot abgesetzt */
+            .kua-btn.kua-detail-btn {
+                flex: none !important; align-self: flex-start !important; width: auto !important; height: auto !important;
+                max-width: max-content; border-color: #c62828; color: #c62828; background: #fdecea;
+            }
+            .kua-btn.kua-detail-btn:hover, .kua-btn.kua-detail-btn:focus-visible { background: #c62828; border-color: #c62828; color: #fff; }
+            .kua-btn.kua-detail-btn[data-state="blocked"] { border-color: #1e1e1e; background: #1e1e1e; color: #fff; }
 
             .kua-note-bar {
                 display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px;
@@ -2400,14 +2431,27 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.2","descript
         return t.length > 0 && /€|zu verschenken/i.test(t) && t.replace(pricePartsRe, '').replace(/\s+/g, '') === '';
     }
 
+    // Buttons dieses und anderer Scripts (Anzeige melden, Superscript) beim Lesen des Preises
+    // ignorieren. Sonst findet das zweite Script die Preiszeile nicht mehr, sobald das erste seinen
+    // Button hineingesetzt hat, und setzt keinen Button.
+    const FOREIGN_UI = '.kua-ui, .klm-wrap, .kps-ui, .kss-ui';
+
+    function textWithoutUi(node) {
+        let text = node.textContent;
+        node.querySelectorAll(FOREIGN_UI).forEach(ui => { text = text.split(ui.textContent).join(''); });
+        return text;
+    }
+
     function findPriceRow(card) {
         const classic = card.querySelector('.aditem-main--middle--price-shipping');
         if (classic) return classic;
+        // Erstes reines Preis-Element: keine Kind-Elemente außer fremden Buttons, nur Preistext
         const first = Array.from(card.querySelectorAll('p, span, div, strong, b'))
-            .find(n => n.children.length === 0 && !n.closest('.kua-ui') && isPriceOnly(n.textContent));
+            .find(n => Array.from(n.children).every(c => c.matches(FOREIGN_UI))
+                && !n.closest(FOREIGN_UI) && isPriceOnly(textWithoutUi(n)));
         if (!first) return null;
         let row = first;
-        while (row.parentElement && row.parentElement !== card && isPriceOnly(row.parentElement.textContent)) {
+        while (row.parentElement && row.parentElement !== card && isPriceOnly(textWithoutUi(row.parentElement))) {
             row = row.parentElement;
         }
         return row;
@@ -2621,7 +2665,7 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.2","descript
         // Zwei Bedienelemente: ein Button am Anbieter-Namen und ein fester Button unten links.
         // Der feste Button hängt direkt am <body> und funktioniert auch dann, wenn die Seite
         // den Anbieter-Kasten neu aufbaut und den Button dort wieder entfernt.
-        const btn = guardedButton({ className: 'kua-ui kua-btn', style: 'margin-left:8px;vertical-align:middle',
+        const btn = guardedButton({ className: 'kua-ui kua-btn kua-detail-btn', style: 'margin-left:8px;vertical-align:middle',
             onclick: () => openPopover(info, btn) });
         const fab = el('button', { type: 'button', className: 'kua-ui kua-pill', onclick: () => openPopover(info, fab) });
         let barClosed = false;
@@ -3232,10 +3276,10 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.2","descript
 });
 
 // ========================================================================
-// Modul „Preisverlauf & Gesehen“ 0.2.1: src/preisverlauf.js
+// Modul „Preisverlauf & Gesehen“ 0.2.2: src/preisverlauf.js
 // Nur im Superscript
 // ========================================================================
-KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.1","description":"Preisänderungen, „Neu“ seit dem letzten Besuch einer Suche und schon gesehene Anzeigen markieren."}, function () {
+KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.2","description":"Preisänderungen, „Neu“ seit dem letzten Besuch einer Suche und schon gesehene Anzeigen markieren."}, function () {
 /*
  * Modul: Preisverlauf & Gesehen
  * -----------------------------
@@ -3993,10 +4037,10 @@ KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.1","d
 });
 
 // ========================================================================
-// Modul „Gespeicherte Suchen“ 0.2.1: src/suchen.js
+// Modul „Gespeicherte Suchen“ 0.2.2: src/suchen.js
 // Nur im Superscript
 // ========================================================================
-KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.1","description":"Sidebar mit eigenen, benannten Suchen zum schnellen Umschalten, optional mit Zähler für neue Anzeigen."}, function () {
+KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.2","description":"Sidebar mit eigenen, benannten Suchen zum schnellen Umschalten, optional mit Zähler für neue Anzeigen."}, function () {
 /*
  * Modul: Gespeicherte Suchen
  * --------------------------
