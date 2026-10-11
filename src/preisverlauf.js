@@ -281,22 +281,12 @@
     // Besuch einer Suche
     // ------------------------------------------------------------------
 
-    // Seite 2, 3 … gehören zur selben Suche: /s-seite:2/…, /…/seite:2/…, ?pageNum=2
-    function searchKey() {
-        const url = new URL(window.location.href);
-        const p = url.pathname.replace(/\/s-seite:\d+\//, '/s-').replace(/\/seite:\d+(?=\/|$)/, '');
-        const params = Array.from(url.searchParams)
-            .filter(([k]) => !/^(pagenum|page|seite)$/i.test(k))
-            .sort((a, b) => (a[0] + a[1]).localeCompare(b[0] + b[1]));
-        return p + (params.length ? '?' + new URLSearchParams(params).toString() : '');
-    }
-
     let visit = null; // { start, prev, touched }
 
     // Beginn dieses Besuchs und des vorherigen (pro Tab im sessionStorage, damit Seite 2 und
     // Neuladen zum selben Besuch zählen)
     function beginVisit() {
-        const key = searchKey();
+        const key = KS.searchKey(window.location.href);
         const sk = CONFIG.visitKeyPrefix + key;
         const now = Date.now();
         let v = null;

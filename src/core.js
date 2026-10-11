@@ -8,6 +8,7 @@
  *   - Anzeige melden ......... unverändert aus vendor/anzeige-melden.user.js
  *   - Nutzer ausblenden ...... unverändert aus vendor/nutzer-ausblenden.user.js
  *   - Preisverlauf & Gesehen . src/preisverlauf.js (nur im Superscript)
+ *   - Gespeicherte Suchen .... src/suchen.js (nur im Superscript)
  *
  * Die beiden übernommenen Scripts gibt es weiterhin einzeln. Ist eins davon zusätzlich
  * installiert, arbeitet pro Modul nur die zuerst gestartete Kopie, die andere bleibt still.
@@ -89,6 +90,17 @@
             }
             children.flat().forEach(c => c != null && c !== false && node.append(c));
             return node;
+        }
+
+        // Adresse einer Suche ohne Seitenzahl, damit Seite 2, 3 … zur selben Suche gehören:
+        // /s-seite:2/…, /…/seite:2/…, ?pageNum=2. Parameter sortiert.
+        function searchKey(href) {
+            const url = new URL(href, window.location.origin);
+            const p = url.pathname.replace(/\/s-seite:\d+\//, '/s-').replace(/\/seite:\d+(?=\/|$)/, '');
+            const params = Array.from(url.searchParams)
+                .filter(([k]) => !/^(pagenum|page|seite)$/i.test(k))
+                .sort((a, b) => (a[0] + a[1]).localeCompare(b[0] + b[1]));
+            return p + (params.length ? '?' + new URLSearchParams(params).toString() : '');
         }
 
         // Bausteine für Einstellungs-Abschnitte der Module
@@ -264,7 +276,7 @@
             GM_registerMenuCommand('Superscript: Einstellungen', openSettings);
         }
 
-        return { VERSION, isObj, load, save, onRemoteChange, el, checkbox, radio, module, addSettings, openSettings };
+        return { VERSION, isObj, load, save, onRemoteChange, el, checkbox, radio, searchKey, module, addSettings, openSettings };
     })();
 
     // ------------------------------------------------------------------

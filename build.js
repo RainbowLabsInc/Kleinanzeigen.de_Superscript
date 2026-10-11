@@ -15,7 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 const OUT = 'superscript.user.js';
 const REPO = 'https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript';
 
@@ -43,6 +43,12 @@ const MODULES = [
         file: 'src/preisverlauf.js',
         label: 'Preisverlauf & Gesehen',
         description: 'Preisänderungen, „Neu“ seit dem letzten Besuch einer Suche und schon gesehene Anzeigen markieren.',
+    },
+    {
+        id: 'suchen',
+        file: 'src/suchen.js',
+        label: 'Gespeicherte Suchen',
+        description: 'Sidebar mit eigenen, benannten Suchen zum schnellen Umschalten, optional mit Zähler für neue Anzeigen.',
     },
 ];
 

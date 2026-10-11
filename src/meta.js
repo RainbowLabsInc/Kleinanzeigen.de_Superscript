@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name          Kleinanzeigen - Superscript
 // @namespace     @@REPO@@
-// @description   Alles in einem für Kleinanzeigen.de: Preisverlauf, neue und schon gesehene Anzeigen in den Suchergebnissen markieren, Anzeigen direkt aus der Übersicht melden, Anbieter blockieren und ausblenden. Jedes Modul einzeln abschaltbar.
+// @description   Alles in einem für Kleinanzeigen.de: Preisverlauf, neue und schon gesehene Anzeigen markieren, gespeicherte Suchen in einer Sidebar, Anzeigen direkt aus der Übersicht melden, Anbieter blockieren und ausblenden. Jedes Modul einzeln abschaltbar.
 // @author        RainbowlabsInc
 // @copyright     2026, RainbowlabsInc
 // @license       MIT
