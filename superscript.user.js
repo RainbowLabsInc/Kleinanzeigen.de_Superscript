@@ -5,7 +5,7 @@
 // @author        RainbowlabsInc
 // @copyright     2026, RainbowlabsInc
 // @license       MIT
-// @version       0.2.0
+// @version       0.2.1
 // @icon          https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/assets/icon48.png
 // @homepage      https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript
 // @updateURL     https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/superscript.user.js
@@ -47,10 +47,9 @@
 (function () {
     'use strict';
 
-    const VERSION = '0.2.0';
+    const VERSION = '0.2.1';
 
-    // Läuft auf der Startseite und auf Seiten unter /s-… (siehe @match). „Anzeige melden“
-    // prüft den Pfad selbst und bleibt auf der Startseite still.
+    // Läuft auf der Startseite und auf Seiten unter /s-… (siehe @match).
     // Nur auf kleinanzeigen.de laufen – zusätzlich zu @match, falls der Script-Manager
     // die Header ignoriert oder das Script manuell mit breiteren Regeln eingebunden wird.
     if (window.location.protocol !== 'https:' || window.location.hostname !== 'www.kleinanzeigen.de') return;
@@ -313,14 +312,14 @@
     // ------------------------------------------------------------------
 
 // ========================================================================
-// Modul „Anzeige melden“ 0.4.2: vendor/anzeige-melden.user.js
+// Modul „Anzeige melden“ 0.4.3: vendor/anzeige-melden.user.js
 // Unverändert übernommen aus https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden
 // ========================================================================
-KS.module("melden", {"label":"Anzeige melden","version":"0.4.2","description":"Button „Melden“ neben dem Preis: Anzeigen direkt aus der Übersicht melden, mit eigenen Bausteinen.","guard":"data-klm-variant","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden"}, function () {
+KS.module("melden", {"label":"Anzeige melden","version":"0.4.3","description":"Button „Melden“ neben dem Preis: Anzeigen direkt aus der Übersicht melden, mit eigenen Bausteinen.","guard":"data-klm-variant","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden"}, function () {
 /*
  * Funktionsweise
  * --------------
- * 1. Übersicht (Suchergebnisse, /s-...):
+ * 1. Übersicht (Suchergebnisse, /s-..., und die Startseite):
  *    Jede Anzeigen-Karte bekommt neben dem Preis einen "Melden"-Button.
  *    Ein Klick öffnet ein kleines Menü direkt am Button: Baustein (Grund + Text) wählen,
  *    Text bei Bedarf anpassen, Meldung bestätigen, absenden.
@@ -422,7 +421,8 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.2","description":"B
 
     const path = window.location.pathname;
     const isDetailPage = path.startsWith('/s-anzeige/');
-    const isSearchPage = path.startsWith('/s-') && !isDetailPage;
+    // Übersicht: Suchergebnisse und Bestandslisten (/s-…) sowie die Startseite
+    const isSearchPage = (path === '/' || path.startsWith('/s-')) && !isDetailPage;
 
     // ------------------------------------------------------------------
     // Gemeinsame Helfer
@@ -1362,10 +1362,10 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.2","description":"B
 });
 
 // ========================================================================
-// Modul „Nutzer ausblenden“ 0.3.1: vendor/nutzer-ausblenden.user.js
+// Modul „Nutzer ausblenden“ 0.3.2: vendor/nutzer-ausblenden.user.js
 // Unverändert übernommen aus https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden
 // ========================================================================
-KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.1","description":"Button „Ausblenden“ neben dem Preis: Anbieter blockieren, einzelne Anzeigen ausblenden, Listen teilen und abonnieren.","guard":"data-kua","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden"}, function () {
+KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.2","description":"Button „Ausblenden“ neben dem Preis: Anbieter blockieren, einzelne Anzeigen ausblenden, Listen teilen und abonnieren.","guard":"data-kua","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden"}, function () {
 /*
  * Funktionsweise
  * --------------
@@ -1383,7 +1383,7 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.1","descript
  *   - optional: unbekannte Anzeigen der Übersicht im Hintergrund prüfen (aus, weil
  *     dafür pro Anzeige eine Anfrage an Kleinanzeigen nötig ist).
  *
- * 1. Übersicht (Suchergebnisse, /s-...):
+ * 1. Übersicht (Suchergebnisse, /s-..., und die Startseite):
  *    Anzeigen blockierter Anbieter und einzeln ausgeblendete Anzeigen werden
  *    eingeklappt (Hinweiszeile) oder ganz ausgeblendet. Neben dem Preis sitzt ein
  *    "Ausblenden"-Button mit einem kleinen Menü, unten links der Button "Blockliste".
@@ -1407,7 +1407,7 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.1","descript
 (function () {
     'use strict';
 
-    const VERSION = '0.3.1';
+    const VERSION = '0.3.2';
 
     const CONFIG = {
         keys: {
@@ -3232,10 +3232,10 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.1","descript
 });
 
 // ========================================================================
-// Modul „Preisverlauf & Gesehen“ 0.2.0: src/preisverlauf.js
+// Modul „Preisverlauf & Gesehen“ 0.2.1: src/preisverlauf.js
 // Nur im Superscript
 // ========================================================================
-KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.0","description":"Preisänderungen, „Neu“ seit dem letzten Besuch einer Suche und schon gesehene Anzeigen markieren."}, function () {
+KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.1","description":"Preisänderungen, „Neu“ seit dem letzten Besuch einer Suche und schon gesehene Anzeigen markieren."}, function () {
 /*
  * Modul: Preisverlauf & Gesehen
  * -----------------------------
@@ -3993,10 +3993,10 @@ KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.0","d
 });
 
 // ========================================================================
-// Modul „Gespeicherte Suchen“ 0.2.0: src/suchen.js
+// Modul „Gespeicherte Suchen“ 0.2.1: src/suchen.js
 // Nur im Superscript
 // ========================================================================
-KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.0","description":"Sidebar mit eigenen, benannten Suchen zum schnellen Umschalten, optional mit Zähler für neue Anzeigen."}, function () {
+KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.1","description":"Sidebar mit eigenen, benannten Suchen zum schnellen Umschalten, optional mit Zähler für neue Anzeigen."}, function () {
 /*
  * Modul: Gespeicherte Suchen
  * --------------------------

@@ -5,11 +5,13 @@
 // @author        RainbowlabsInc
 // @copyright     2026, RainbowlabsInc
 // @license       MIT
-// @version       0.3.1
+// @version       0.3.2
 // @icon          https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden/raw/main/assets/icon48.png
 // @homepage      https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden
 // @updateURL     https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden/raw/main/script.user.js
 // @downloadURL   https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden/raw/main/script.user.js
+// @match         https://www.kleinanzeigen.de/
+// @match         https://www.kleinanzeigen.de/?*
 // @match         https://www.kleinanzeigen.de/s-*
 // @grant         GM_getValue
 // @grant         GM_setValue
@@ -40,7 +42,7 @@
  *   - optional: unbekannte Anzeigen der Übersicht im Hintergrund prüfen (aus, weil
  *     dafür pro Anzeige eine Anfrage an Kleinanzeigen nötig ist).
  *
- * 1. Übersicht (Suchergebnisse, /s-...):
+ * 1. Übersicht (Suchergebnisse, /s-..., und die Startseite):
  *    Anzeigen blockierter Anbieter und einzeln ausgeblendete Anzeigen werden
  *    eingeklappt (Hinweiszeile) oder ganz ausgeblendet. Neben dem Preis sitzt ein
  *    "Ausblenden"-Button mit einem kleinen Menü, unten links der Button "Blockliste".
@@ -64,7 +66,7 @@
 (function () {
     'use strict';
 
-    const VERSION = '0.3.1';
+    const VERSION = '0.3.2';
 
     const CONFIG = {
         keys: {

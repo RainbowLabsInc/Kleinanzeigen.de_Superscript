@@ -15,7 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 const OUT = 'superscript.user.js';
 const REPO = 'https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript';
 

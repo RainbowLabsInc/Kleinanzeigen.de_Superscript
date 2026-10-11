@@ -6,7 +6,7 @@
 
 **Alles in einem Userscript für Kleinanzeigen.de: Preisverlauf, neue und schon gesehene Anzeigen, gespeicherte Suchen, Melden aus der Übersicht und eine eigene Blockliste.**
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue?style=flat-square)](https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/superscript.user.js)
+[![Version](https://img.shields.io/badge/version-0.2.1-blue?style=flat-square)](https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/superscript.user.js)
 [![Plattform](https://img.shields.io/badge/plattform-Kleinanzeigen.de-green?style=flat-square)](https://www.kleinanzeigen.de)
 [![Userscript](https://img.shields.io/badge/Tampermonkey-Violentmonkey-black?style=flat-square&logo=tampermonkey)](#%EF%B8%8F-installation)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
@@ -28,12 +28,12 @@ Wer auf Kleinanzeigen etwas Bestimmtes sucht, schaut oft tagelang dieselbe Suche
 |---|---|---|
 | 🏷️ **Preisverlauf & Gesehen** | Preisänderungen mit Datum, „Neu“ seit deinem letzten Besuch einer Suche, „Gesehen“ und „Geöffnet“, auf Wunsch abgedunkelt | nein, nur im Superscript |
 | ★ **Gespeicherte Suchen** | Sidebar mit eigenen, benannten Suchen, Umschalten per Klick oder Alt+1 … Alt+9, optional Zähler für neue Anzeigen | nein, nur im Superscript |
-| 🚩 **Anzeige melden** (0.4.2) | Button „Melden“ neben dem Preis: Anzeigen direkt aus der Übersicht melden, mit eigenen Bausteinen | [ja](https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden) |
-| 🚫 **Nutzer ausblenden** (0.3.1) | Button „Ausblenden“ neben dem Preis: Anbieter blockieren, einzelne Anzeigen ausblenden, Listen teilen und abonnieren | [ja](https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden) |
+| 🚩 **Anzeige melden** (0.4.3) | Button „Melden“ neben dem Preis: Anzeigen direkt aus der Übersicht melden, mit eigenen Bausteinen | [ja](https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden) |
+| 🚫 **Nutzer ausblenden** (0.3.2) | Button „Ausblenden“ neben dem Preis: Anbieter blockieren, einzelne Anzeigen ausblenden, Listen teilen und abonnieren | [ja](https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden) |
 
 Die beiden übernommenen Module sind **unverändert** die jeweils aktuelle Version der Einzel-Scripts. Deren Beschreibung und Bedienung findest du in den verlinkten Projekten.
 
-**Auch auf der Startseite:** Dort blendet die Blockliste Anzeigen blockierter Anbieter aus, der Preisverlauf markiert Preisänderungen und schon gesehene Anzeigen (ohne „Neu“, denn die Startseite ist keine Suche), und die Sidebar der gespeicherten Suchen ist da. Nur „Anzeige melden“ bleibt dort still, so wie das Einzel-Script, das nur auf Such- und Anzeigenseiten arbeitet.
+**Auch auf der Startseite:** Dort blendet die Blockliste Anzeigen blockierter Anbieter aus, an jeder Anzeige sitzen „Melden“ und „Ausblenden“, der Preisverlauf markiert Preisänderungen und schon gesehene Anzeigen (ohne „Neu“, denn die Startseite ist keine Suche), und die Sidebar der gespeicherten Suchen ist da.
 
 <p align="center">
   <img src="assets/vorschau-liste.png" alt="Suchergebnisse mit Markierungen: Preis gesenkt, Gesehen, Geöffnet, Neu; bekannte Anzeigen abgedunkelt" width="560">
@@ -180,7 +180,7 @@ Ein neues Modul: Datei unter `src/` anlegen (eine Funktion, die sich selbst aufr
 
 | Umgebung | Stand |
 |---|---|
-| Chromium mit nachgebauten Seiten | ✅ Startseite: Anzeige eines blockierten Anbieters eingeklappt, Ausblenden-Buttons, Melden inaktiv, Sidebar ohne Speichern-Feld, Preise erfasst, kein „Neu“ |
+| Chromium mit nachgebauten Seiten | ✅ Startseite: Anzeige eines blockierten Anbieters eingeklappt, Melden- und Ausblenden-Buttons, Sidebar ohne Speichern-Feld, Preise erfasst, kein „Neu“ |
 | Chromium mit nachgebauten Seiten | ✅ Gespeicherte Suchen: aufklappen, speichern mit Namensvorschlag, Sidebar bleibt beim Seitenwechsel offen, umbenennen, sortieren, löschen, Alt+2, Seite 2 als dieselbe Suche, Zähler (aus = keine Anfragen, nur andere Suchen, ausgeblendete Anzeigen nicht mitgezählt, höchstens stündlich, Besuch setzt zurück), Anzeigenseite |
 | Chromium mit nachgebauten Seiten | ✅ Preis erkennen (klassische und generische Karten, Altpreis, Dezimalpreis), Preissenkung, „Neu“, „Gesehen“, „Geöffnet“, Abdunkeln und Einstellungen dazu, Seite 2 im selben Besuch, Verlauf als Popover (ohne die Anzeige zu öffnen), Anzeigenseite (Verlauf unter dem Preis, Empfehlungen ignoriert), Modul abschalten, Einzel-Script parallel installiert, Melden- und Ausblenden-Buttons nebeneinander |
 | Live-Seite, Tampermonkey | ✅ 0.1.0 läuft; eine echte Preisänderung wurde noch nicht beobachtet |
@@ -195,6 +195,7 @@ Kleinanzeigen ändert sein Frontend regelmäßig. Funktioniert etwas nicht, hilf
 
 | Version | Änderungen |
 |---|---|
+| **0.2.1** | „Anzeige melden“ 0.4.3 und „Nutzer ausblenden“ 0.3.2 übernommen: beide arbeiten jetzt auch auf der Startseite |
 | **0.2.0** | Neues Modul „Gespeicherte Suchen“: Sidebar mit benannten Suchen, Umschalten per Klick oder Alt+1 … Alt+9, optionaler Zähler für neue Anzeigen. Superscript läuft jetzt auch auf der Startseite: Blockliste, Preisverlauf und Sidebar |
 | **0.1.0** | Erste Version: neues Modul „Preisverlauf & Gesehen“, dazu „Anzeige melden“ 0.4.2 und „Nutzer ausblenden“ 0.3.1; Module einzeln abschaltbar, Schutz gegen doppelt laufende Einzel-Scripts |
 

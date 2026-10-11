@@ -22,8 +22,7 @@
 
     const VERSION = '@@VERSION@@';
 
-    // Läuft auf der Startseite und auf Seiten unter /s-… (siehe @match). „Anzeige melden“
-    // prüft den Pfad selbst und bleibt auf der Startseite still.
+    // Läuft auf der Startseite und auf Seiten unter /s-… (siehe @match).
     // Nur auf kleinanzeigen.de laufen – zusätzlich zu @match, falls der Script-Manager
     // die Header ignoriert oder das Script manuell mit breiteren Regeln eingebunden wird.
     if (window.location.protocol !== 'https:' || window.location.hostname !== 'www.kleinanzeigen.de') return;
