@@ -298,12 +298,13 @@
         .kss-row { display: flex; align-items: center; gap: 6px; }
         .kss-input { flex: 1; min-width: 0; width: 100%; padding: 6px 8px; border: 1px solid #c9c7c2; border-radius: 8px; background: #fff; }
         .kss-input:focus { outline: 2px solid #1e1e1e; outline-offset: -1px; }
-        .kss-action {
+        /* Mit .kss-panel davor: sonst gewinnt ".kss-panel button { color: inherit }" und die Schrift ist schwarz auf schwarz */
+        .kss-panel .kss-action {
             flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid #1e1e1e; background: #1e1e1e; color: #fff;
             font-weight: 600; cursor: pointer; white-space: nowrap;
         }
-        .kss-action[data-plain] { background: #fff; color: #1e1e1e; border-color: #c9c7c2; }
-        .kss-action:hover, .kss-action:focus-visible { outline: 2px solid #1e1e1e; outline-offset: 1px; }
+        .kss-panel .kss-action[data-plain] { background: #fff; color: #1e1e1e; border-color: #c9c7c2; }
+        .kss-panel .kss-action:hover, .kss-panel .kss-action:focus-visible { outline: 2px solid #1e1e1e; outline-offset: 1px; }
         .kss-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
         .kss-item { display: flex; align-items: center; gap: 4px; padding: 6px 4px 6px 10px; border: 1px solid #e3e1dc; border-radius: 8px; }
         .kss-item[data-current] { border-color: #1e1e1e; background: #f7f6f3; }
@@ -330,6 +331,7 @@
         onclick: () => setSetting('open', !settings.open) });
     const panel = el('aside', { className: 'kss-ui kss-panel', 'aria-label': 'Gespeicherte Suchen' });
     let editingId = null;
+    let editDraft = null; // Name beim Umbenennen, bleibt beim Neuzeichnen erhalten
     let draftName = null; // Name im Speichern-Feld, bleibt beim Neuzeichnen erhalten
 
     function newText(s) {
@@ -349,17 +351,22 @@
     function itemRow(s, i) {
         const isCurrent = s.url === currentKey;
         if (editingId === s.id) {
-            const input = el('input', { className: 'kss-input', type: 'text', value: s.name, maxLength: CONFIG.nameMax, 'aria-label': 'Name der Suche' });
+            const first = editDraft == null;
+            if (first) editDraft = s.name;
+            const input = el('input', { className: 'kss-input', type: 'text', value: editDraft, maxLength: CONFIG.nameMax, 'aria-label': 'Name der Suche',
+                dataset: { focus: 'rename' }, oninput: (e) => { editDraft = e.target.value; } });
             const done = (keep) => {
                 const name = clip(input.value, CONFIG.nameMax);
                 editingId = null;
+                editDraft = null;
                 if (keep && name) updateSearch(s.id, x => { x.name = name; }); else render();
             };
             input.addEventListener('keydown', e => {
                 if (e.key === 'Enter') done(true);
                 if (e.key === 'Escape') { e.stopPropagation(); done(false); }
             });
-            setTimeout(() => { input.focus(); input.select(); }, 0);
+            // Nur beim Öffnen alles markieren; beim Neuzeichnen stellt render() den Fokus wieder her
+            if (first) setTimeout(() => { input.focus(); input.select(); }, 0);
             return el('li', { className: 'kss-item', dataset: isCurrent ? { current: '' } : null },
                 el('div', { className: 'kss-row', style: 'flex:1' }, input,
                     el('button', { type: 'button', className: 'kss-action', onclick: () => done(true) }, 'OK')));
@@ -383,7 +390,7 @@
             el('div', { className: 'kss-tools' },
                 el('button', { type: 'button', className: 'kss-icon-btn', title: 'Nach oben', 'aria-label': `${s.name} nach oben`, disabled: i === 0, onclick: () => move(-1) }, '↑'),
                 el('button', { type: 'button', className: 'kss-icon-btn', title: 'Nach unten', 'aria-label': `${s.name} nach unten`, disabled: i === searches.length - 1, onclick: () => move(1) }, '↓'),
-                el('button', { type: 'button', className: 'kss-icon-btn', title: 'Umbenennen', 'aria-label': `${s.name} umbenennen`, onclick: () => { editingId = s.id; render(); } }, '✎'),
+                el('button', { type: 'button', className: 'kss-icon-btn', title: 'Umbenennen', 'aria-label': `${s.name} umbenennen`, onclick: () => { editingId = s.id; editDraft = null; render(); } }, '✎'),
                 el('button', { type: 'button', className: 'kss-icon-btn', title: 'Löschen', 'aria-label': `${s.name} löschen`,
                     onclick: () => { if (window.confirm(`Gespeicherte Suche „${s.name}“ löschen?`)) mutate(list => { const at = list.findIndex(x => x.id === s.id); if (at >= 0) list.splice(at, 1); }); } }, '🗑')));
     }
@@ -395,7 +402,7 @@
         if (searches.length >= CONFIG.max) return el('p', { className: 'kss-hint' }, `Höchstens ${CONFIG.max} gespeicherte Suchen.`);
         if (draftName == null) draftName = suggestName();
         const input = el('input', { className: 'kss-input', type: 'text', value: draftName, maxLength: CONFIG.nameMax,
-            'aria-label': 'Name für diese Suche', oninput: (e) => { draftName = e.target.value; } });
+            'aria-label': 'Name für diese Suche', dataset: { focus: 'save' }, oninput: (e) => { draftName = e.target.value; } });
         const doSave = () => {
             const name = clip(input.value, CONFIG.nameMax) || suggestName();
             draftName = null;
@@ -417,7 +424,7 @@
             panel.remove();
             return;
         }
-        // Fokus im Panel merken (z. B. Häkchen), damit Tastaturnutzer nach dem Neuzeichnen nicht herausfallen
+        // Fokus im Panel merken (Häkchen, Namensfelder), damit beim Neuzeichnen niemand aus dem Feld fällt
         const focused = panel.contains(document.activeElement) ? document.activeElement.getAttribute('data-focus') : null;
         const list = searches.length
             ? el('ol', { className: 'kss-list' }, searches.map(itemRow))
@@ -439,7 +446,11 @@
         if (!panel.isConnected) document.body.appendChild(panel);
         if (focused) {
             const again = panel.querySelector(`[data-focus="${focused}"]`);
-            if (again) again.focus({ preventScroll: true });
+            if (again) {
+                again.focus({ preventScroll: true });
+                // Neu erzeugtes Textfeld: Cursor ans Ende, damit weiter getippt werden kann
+                if (again.type === 'text') again.setSelectionRange(again.value.length, again.value.length);
+            }
         }
     }
 

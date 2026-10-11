@@ -5,7 +5,7 @@
 // @author        RainbowlabsInc
 // @copyright     2026, RainbowlabsInc
 // @license       MIT
-// @version       0.2.3
+// @version       0.2.4
 // @icon          https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/assets/icon48.png
 // @homepage      https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript
 // @updateURL     https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/superscript.user.js
@@ -47,7 +47,7 @@
 (function () {
     'use strict';
 
-    const VERSION = '0.2.3';
+    const VERSION = '0.2.4';
 
     // Läuft auf der Startseite und auf Seiten unter /s-… (siehe @match).
     // Nur auf kleinanzeigen.de laufen – zusätzlich zu @match, falls der Script-Manager
@@ -312,10 +312,10 @@
     // ------------------------------------------------------------------
 
 // ========================================================================
-// Modul „Anzeige melden“ 0.4.5: vendor/anzeige-melden.user.js
+// Modul „Anzeige melden“ 0.4.6: vendor/anzeige-melden.user.js
 // Unverändert übernommen aus https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden
 // ========================================================================
-KS.module("melden", {"label":"Anzeige melden","version":"0.4.5","description":"Button „Melden“ neben dem Preis: Anzeigen direkt aus der Übersicht melden, mit eigenen Bausteinen.","guard":"data-klm-variant","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden"}, function () {
+KS.module("melden", {"label":"Anzeige melden","version":"0.4.6","description":"Button „Melden“ neben dem Preis: Anzeigen direkt aus der Übersicht melden, mit eigenen Bausteinen.","guard":"data-klm-variant","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden"}, function () {
 /*
  * Funktionsweise
  * --------------
@@ -390,15 +390,16 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.5","description":"B
             { id: 'FRAUD_SUSPICIOUS_EXCHANGES_WITH_SELLER', label: 'Verdächtiges Verhalten' },
             { id: 'FRAUD_OTHER', label: 'Anderer Verstoß (verdächtiger Inhalt)' },
         ],
-        // Fertige Bausteine; Platzhalter: {titel}, {preis}, {id}, {link}
+        // Fertige Bausteine; Platzhalter: {titel}, {preis}, {id}, {link}. Feste IDs, damit der
+        // zuletzt benutzte Baustein auch ohne gespeicherte eigene Bausteine wiedererkannt wird.
         defaultTemplates: [
-            { name: 'Lockpreis', reasonId: 'FRAUD_SUSPICIOUS_PRICE',
+            { id: 'std-lockpreis', name: 'Lockpreis', reasonId: 'FRAUD_SUSPICIOUS_PRICE',
                 text: 'Der angegebene Preis ({preis}) ist nicht der tatsächliche Verkaufspreis. Laut Beschreibung wird ein deutlich anderer Preis verlangt.' },
-            { name: 'Platzhalter-Preis für die Sortierung', reasonId: 'FRAUD_SUSPICIOUS_PRICE',
+            { id: 'std-platzhalter', name: 'Platzhalter-Preis für die Sortierung', reasonId: 'FRAUD_SUSPICIOUS_PRICE',
                 text: 'Der Preis {preis} ist nur ein Platzhalter, damit die Anzeige bei der Sortierung nach Preis ganz oben erscheint.' },
-            { name: 'Nur Tausch statt Verkauf', reasonId: 'FRAUD_SUSPICIOUS_PRICE',
+            { id: 'std-tausch', name: 'Nur Tausch statt Verkauf', reasonId: 'FRAUD_SUSPICIOUS_PRICE',
                 text: 'Angegeben ist ein Preis von {preis}, laut Beschreibung wird aber nur getauscht und nicht verkauft.' },
-            { name: 'Verdacht auf Betrug', reasonId: 'FRAUD_OTHER',
+            { id: 'std-betrug', name: 'Verdacht auf Betrug', reasonId: 'FRAUD_OTHER',
                 text: 'Die Anzeige wirkt betrügerisch: ' },
         ],
         // Bestätigung wie im offiziellen Dialog
@@ -928,7 +929,7 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.5","description":"B
     }
 
     function defaultTemplates() {
-        return CONFIG.defaultTemplates.map(t => ({ id: newId(), ...t }));
+        return CONFIG.defaultTemplates.map(t => ({ ...t }));
     }
 
     function saveTemplates(list) {
@@ -1143,17 +1144,23 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.5","description":"B
             update();
             showStatus('Meldung wird gesendet …');
             const userName = name.value.trim();
+            const template = selected;
             let code = 0, detail = '';
             try {
-                ({ code, detail } = await sendReport(info.adId, { reasonId: selected.reasonId, text: text.value.trim(), userName, token }));
+                ({ code, detail } = await sendReport(info.adId, { reasonId: template.reasonId, text: text.value.trim(), userName, token }));
             } catch (e) { code = 0; }
-            if (!menu || menu.root !== root) return;
+            // Das Menü kann inzwischen geschlossen sein (Escape, Klick daneben): Das Ergebnis trotzdem festhalten
+            const open = !!menu && menu.root === root;
             if (code >= 200 && code < 300) {
-                writeSetting(CONFIG.lastTemplateKey, selected.id);
+                writeSetting(CONFIG.lastTemplateKey, template.id);
                 writeSetting(CONFIG.userNameKey, userName);
                 markReported(info.adId);
-                closeMenu();
-                showToast(`Anzeige gemeldet: ${knownReason(selected.reasonId).label}`, 'ok', [], 4000);
+                if (open) closeMenu();
+                showToast(`Anzeige gemeldet: ${knownReason(template.reasonId).label}`, 'ok', [], 4000);
+                return;
+            }
+            if (!open) {
+                showToast(`Meldung für „${info.title || 'Anzeige ' + info.adId}“ nicht gesendet${code ? ` (Status ${code})` : ' (Netzwerkfehler)'}. Bitte erneut versuchen.`, 'warn', [], 8000);
                 return;
             }
             sending = false;
@@ -1404,10 +1411,10 @@ KS.module("melden", {"label":"Anzeige melden","version":"0.4.5","description":"B
 });
 
 // ========================================================================
-// Modul „Nutzer ausblenden“ 0.3.4: vendor/nutzer-ausblenden.user.js
+// Modul „Nutzer ausblenden“ 0.3.5: vendor/nutzer-ausblenden.user.js
 // Unverändert übernommen aus https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden
 // ========================================================================
-KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","description":"Button „Ausblenden“ neben dem Preis: Anbieter blockieren, einzelne Anzeigen ausblenden, Listen teilen und abonnieren.","guard":"data-kua","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden"}, function () {
+KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.5","description":"Button „Ausblenden“ neben dem Preis: Anbieter blockieren, einzelne Anzeigen ausblenden, Listen teilen und abonnieren.","guard":"data-kua","source":"https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden"}, function () {
 /*
  * Funktionsweise
  * --------------
@@ -1449,7 +1456,7 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
 (function () {
     'use strict';
 
-    const VERSION = '0.3.4';
+    const VERSION = '0.3.5';
 
     const CONFIG = {
         keys: {
@@ -1576,6 +1583,9 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
     }
 
     const isShop = (id) => id.startsWith('pro:');
+    // Eintrag aus einem (noch) abonnierten Abo. Verweist er auf ein Abo, das es nicht mehr gibt,
+    // gilt er als eigener Eintrag, damit er sichtbar bleibt und freigegeben werden kann.
+    const isSubEntry = (u) => !!(u && u.sub && state.subs[u.sub]);
     const sellerPageName = (id) => (isShop(id) ? 'Shop-Seite' : 'Bestandsliste');
 
     // Hinweisfeld (<p class="kua-note">) setzen; ohne Text wird es ausgeblendet
@@ -1948,6 +1958,8 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
         showToast(`„${label}“ blockiert.`, 'ok', [undo], 8000);
         scanSeller(id).then(n => {
             refreshPage();
+            // Verwaltung offen (Anbieter dort hinzugefügt)? Zahl der bekannten Anzeigen nachziehen
+            if (panel) renderPanel();
             if (state.users[id]) {
                 showToast(`„${label}“ blockiert, ${n} Anzeige${n === 1 ? '' : 'n'} auf der ${sellerPageName(id)} gefunden.`, 'ok', [undo], 6000);
             }
@@ -2014,19 +2026,26 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
     const syncing = new Set();
 
     async function syncSub(url) {
-        const sub = state.subs[url];
-        if (!sub || syncing.has(url)) return null;
+        if (!state.subs[url] || syncing.has(url)) return null;
         syncing.add(url);
         try {
-            sub.lastCheck = Date.now();
+            state.subs[url].lastCheck = Date.now();
             let list;
             try {
                 list = parseList(await fetchListText(url));
+                // Eine HTML-Seite (Anmeldung, Fehlerseite) ist keine Liste. Nicht abgleichen,
+                // sonst fielen alle Einträge des Abos weg.
+                if (!list.users.length && list.invalid) throw new Error('Unter der Adresse steht keine Blockliste (keine gültigen Einträge)');
             } catch (e) {
-                sub.error = clip(e.message, 200);
-                saveSubs();
+                if (state.subs[url]) {
+                    state.subs[url].error = clip(e.message, 200);
+                    saveSubs();
+                }
                 throw e;
             }
+            // Während des Ladens kann ein anderer Tab den Stand neu geladen haben: aktuellen nehmen
+            const sub = state.subs[url];
+            if (!sub) return null;
             const title = list.title || sub.title || new URL(url).hostname;
             const wanted = new Map(list.users.filter(u => !sub.excluded.includes(u.id)).map(u => [u.id, u]));
             const result = { added: 0, removed: 0, total: wanted.size, title };
@@ -2043,8 +2062,9 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
                 }
             }
             Object.assign(sub, { title, lastSuccess: Date.now(), error: '' });
-            saveUsers();
+            // Erst das Abo, dann die Einträge: andere Tabs kennen das Abo, bevor sie die Einträge sehen
             saveSubs();
+            saveUsers();
             refreshPage();
             return result;
         } finally {
@@ -2337,7 +2357,7 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
             if (blocked) {
                 parts.push(el('p', { className: 'kua-note', dataset: { kind: 'ok' } },
                     `Blockiert seit ${fmtDate(blocked.added)}${blocked.note ? ` · ${blocked.note}` : ''}`
-                    + (blocked.source ? ` · aus ${blocked.sub ? 'Abo ' : ''}„${blocked.source}“` : '')));
+                    + (blocked.source ? ` · aus ${isSubEntry(blocked) ? 'Abo ' : ''}„${blocked.source}“` : '')));
                 parts.push(el('div', { className: 'kua-row' },
                     el('span', { className: 'kua-spacer' }),
                     el('button', { type: 'button', className: 'kua-action', onclick: () => { unblockUser(uid); render(); } }, 'Anbieter freigeben')));
@@ -2752,7 +2772,7 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
     // ------------------------------------------------------------------
 
     // Exportiert wird nur die eigene Liste (inkl. zusammengeführter Listen), keine Abo-Einträge
-    const ownUsers = () => Object.entries(state.users).filter(([, u]) => !u.sub);
+    const ownUsers = () => Object.entries(state.users).filter(([, u]) => !isSubEntry(u));
 
     function exportJson() {
         const users = ownUsers()
@@ -2798,7 +2818,11 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
         const pushUser = (id, entry) => {
             if (seenUsers.has(id)) return;
             seenUsers.add(id);
-            out.users.push({ id, ...cleanUser(entry) });
+            // "sub" setzt nur der Abgleich eines Abos, nie die Liste selbst (sonst wäre der
+            // Eintrag nach dem Import unsichtbar)
+            const user = cleanUser(entry);
+            delete user.sub;
+            out.users.push({ id, ...user });
         };
         const addUser = (raw) => {
             const entry = typeof raw === 'string' ? { id: raw } : raw;
@@ -2852,7 +2876,8 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
     function importList(list, opts = {}) {
         const result = { added: 0, existing: 0, ads: 0 };
         if (opts.replace) {
-            state.users = {};
+            // Ersetzt wird nur die eigene Liste; Einträge aus Abos bleiben
+            Object.keys(state.users).forEach(id => { if (!isSubEntry(state.users[id])) delete state.users[id]; });
             state.ads = {};
         }
         const source = clip(opts.source, CONFIG.sourceMax);
@@ -2934,7 +2959,7 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
         if (!panel) return;
         const { box } = panel;
         const scrollTop = box.scrollTop;
-        const ids = Object.keys(state.users).filter(id => !state.users[id].sub);
+        const ids = Object.keys(state.users).filter(id => !isSubEntry(state.users[id]));
         const adCounts = {};
         Object.values(state.index).forEach(uid => { if (state.users[uid]) adCounts[uid] = (adCounts[uid] || 0) + 1; });
 
@@ -3028,10 +3053,10 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
         const fileInput = el('input', { type: 'file', accept: '.json,.txt,application/json,text/plain', hidden: true,
             onchange: async (e) => {
                 const file = e.target.files && e.target.files[0];
+                e.target.value = ''; // dieselbe Datei lässt sich so erneut wählen
                 if (!file) return;
                 if (file.size > 2 * 1024 * 1024) { showIo('Die Datei ist zu groß (max. 2 MB).', 'error'); return; }
                 startPreview(await file.text(), file.name.replace(/\.(json|txt)$/i, ''));
-                e.target.value = '';
             } });
 
         const previewBox = el('div', { className: 'kua-preview', hidden: true });
@@ -3088,7 +3113,8 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
                 if (r.added) refreshBlockedSellers().then(() => renderPanel());
             });
 
-            previewBox.replaceChildren(
+            // replaceChildren() setzt null als Text "null" ein, darum vorher herausfiltern
+            previewBox.replaceChildren(...[
                 el('p', { className: 'kua-note' }, summary),
                 modeRadio(false, 'Zu meiner Liste hinzufügen (empfohlen): deine Einträge bleiben, nur neue Anbieter kommen dazu'),
                 modeRadio(true, 'Meine Liste ersetzen: die bisherige Blockliste wird gelöscht'),
@@ -3108,7 +3134,8 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
                 el('div', { className: 'kua-row' },
                     el('span', { className: 'kua-spacer' }),
                     el('button', { type: 'button', className: 'kua-action', onclick: () => { panel.preview = null; drawPreview(); } }, 'Abbrechen'),
-                    mergeBtn));
+                    mergeBtn),
+            ].filter(Boolean));
             updateMergeBtn();
         };
         drawPreview();
@@ -3118,7 +3145,11 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
         ids.forEach(id => { const src = state.users[id].source; if (src) sources[src] = (sources[src] || 0) + 1; });
         const removeSource = (src) => {
             let n = 0;
-            Object.keys(state.users).forEach(id => { if (state.users[id].source === src) { delete state.users[id]; n++; } });
+            // Nur übernommene Einträge; ein Abo mit gleichem Namen bleibt unberührt
+            Object.keys(state.users).forEach(id => {
+                const u = state.users[id];
+                if (u.source === src && !isSubEntry(u)) { delete state.users[id]; n++; }
+            });
             saveUsers();
             refreshPage();
             renderPanel();
@@ -3137,7 +3168,7 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
         const subUrl = el('input', { className: 'kua-input', type: 'url', placeholder: 'https://… (Adresse der Liste)', 'aria-label': 'Adresse der Liste' });
         const subStatus = el('p', { className: 'kua-note', role: 'status', hidden: true });
         const subCounts = {};
-        Object.values(state.users).forEach(u => { if (u.sub) subCounts[u.sub] = (subCounts[u.sub] || 0) + 1; });
+        Object.values(state.users).forEach(u => { if (isSubEntry(u)) subCounts[u.sub] = (subCounts[u.sub] || 0) + 1; });
         const subResultText = (r) => `„${r.title}“: ${r.total} Anbieter in der Liste`
             + (r.added || r.removed ? ` (${r.added} neu, ${r.removed} entfernt)` : ', keine Änderungen') + '.';
         const doSubscribe = async () => {
@@ -3145,10 +3176,13 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
             if (!url) { setNote(subStatus, 'Bitte eine vollständige https-Adresse angeben, z. B. https://raw.githubusercontent.com/…/liste.txt.', 'error'); return; }
             if (state.subs[url]) { setNote(subStatus, 'Diese Liste ist bereits abonniert.', 'ok'); return; }
             state.subs[url] = { title: '', added: Date.now(), lastCheck: 0, lastSuccess: 0, error: '', excluded: [] };
+            // Gleich speichern: lädt ein anderer Tab währenddessen den Stand neu, bleibt das Abo erhalten
+            saveSubs();
             setNote(subStatus, 'Liste wird geladen …');
             try {
                 const r = await syncSub(url);
                 renderPanel();
+                if (!r) return;
                 showPanelNote(`Abonniert: ${subResultText(r)}`
                     + (r.added ? ` Die Anzeigen der neuen Anbieter werden nach und nach eingelesen (bis zu ${CONFIG.refreshPerVisit} Anbieter pro Seitenaufruf).` : ''), 'ok');
                 if (r.added) refreshBlockedSellers().then(() => renderPanel());
@@ -3314,10 +3348,10 @@ KS.module("blockliste", {"label":"Nutzer ausblenden","version":"0.3.4","descript
 });
 
 // ========================================================================
-// Modul „Preisverlauf & Gesehen“ 0.2.3: src/preisverlauf.js
+// Modul „Preisverlauf & Gesehen“ 0.2.4: src/preisverlauf.js
 // Nur im Superscript
 // ========================================================================
-KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.3","description":"Preisänderungen, „Neu“ seit dem letzten Besuch einer Suche und schon gesehene Anzeigen markieren."}, function () {
+KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.4","description":"Preisänderungen, „Neu“ seit dem letzten Besuch einer Suche und schon gesehene Anzeigen markieren."}, function () {
 /*
  * Modul: Preisverlauf & Gesehen
  * -----------------------------
@@ -4076,10 +4110,10 @@ KS.module("preisverlauf", {"label":"Preisverlauf & Gesehen","version":"0.2.3","d
 });
 
 // ========================================================================
-// Modul „Gespeicherte Suchen“ 0.2.3: src/suchen.js
+// Modul „Gespeicherte Suchen“ 0.2.4: src/suchen.js
 // Nur im Superscript
 // ========================================================================
-KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.3","description":"Sidebar mit eigenen, benannten Suchen zum schnellen Umschalten, optional mit Zähler für neue Anzeigen."}, function () {
+KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.4","description":"Sidebar mit eigenen, benannten Suchen zum schnellen Umschalten, optional mit Zähler für neue Anzeigen."}, function () {
 /*
  * Modul: Gespeicherte Suchen
  * --------------------------
@@ -4380,12 +4414,13 @@ KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.3","descriptio
         .kss-row { display: flex; align-items: center; gap: 6px; }
         .kss-input { flex: 1; min-width: 0; width: 100%; padding: 6px 8px; border: 1px solid #c9c7c2; border-radius: 8px; background: #fff; }
         .kss-input:focus { outline: 2px solid #1e1e1e; outline-offset: -1px; }
-        .kss-action {
+        /* Mit .kss-panel davor: sonst gewinnt ".kss-panel button { color: inherit }" und die Schrift ist schwarz auf schwarz */
+        .kss-panel .kss-action {
             flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid #1e1e1e; background: #1e1e1e; color: #fff;
             font-weight: 600; cursor: pointer; white-space: nowrap;
         }
-        .kss-action[data-plain] { background: #fff; color: #1e1e1e; border-color: #c9c7c2; }
-        .kss-action:hover, .kss-action:focus-visible { outline: 2px solid #1e1e1e; outline-offset: 1px; }
+        .kss-panel .kss-action[data-plain] { background: #fff; color: #1e1e1e; border-color: #c9c7c2; }
+        .kss-panel .kss-action:hover, .kss-panel .kss-action:focus-visible { outline: 2px solid #1e1e1e; outline-offset: 1px; }
         .kss-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
         .kss-item { display: flex; align-items: center; gap: 4px; padding: 6px 4px 6px 10px; border: 1px solid #e3e1dc; border-radius: 8px; }
         .kss-item[data-current] { border-color: #1e1e1e; background: #f7f6f3; }
@@ -4412,6 +4447,7 @@ KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.3","descriptio
         onclick: () => setSetting('open', !settings.open) });
     const panel = el('aside', { className: 'kss-ui kss-panel', 'aria-label': 'Gespeicherte Suchen' });
     let editingId = null;
+    let editDraft = null; // Name beim Umbenennen, bleibt beim Neuzeichnen erhalten
     let draftName = null; // Name im Speichern-Feld, bleibt beim Neuzeichnen erhalten
 
     function newText(s) {
@@ -4431,17 +4467,22 @@ KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.3","descriptio
     function itemRow(s, i) {
         const isCurrent = s.url === currentKey;
         if (editingId === s.id) {
-            const input = el('input', { className: 'kss-input', type: 'text', value: s.name, maxLength: CONFIG.nameMax, 'aria-label': 'Name der Suche' });
+            const first = editDraft == null;
+            if (first) editDraft = s.name;
+            const input = el('input', { className: 'kss-input', type: 'text', value: editDraft, maxLength: CONFIG.nameMax, 'aria-label': 'Name der Suche',
+                dataset: { focus: 'rename' }, oninput: (e) => { editDraft = e.target.value; } });
             const done = (keep) => {
                 const name = clip(input.value, CONFIG.nameMax);
                 editingId = null;
+                editDraft = null;
                 if (keep && name) updateSearch(s.id, x => { x.name = name; }); else render();
             };
             input.addEventListener('keydown', e => {
                 if (e.key === 'Enter') done(true);
                 if (e.key === 'Escape') { e.stopPropagation(); done(false); }
             });
-            setTimeout(() => { input.focus(); input.select(); }, 0);
+            // Nur beim Öffnen alles markieren; beim Neuzeichnen stellt render() den Fokus wieder her
+            if (first) setTimeout(() => { input.focus(); input.select(); }, 0);
             return el('li', { className: 'kss-item', dataset: isCurrent ? { current: '' } : null },
                 el('div', { className: 'kss-row', style: 'flex:1' }, input,
                     el('button', { type: 'button', className: 'kss-action', onclick: () => done(true) }, 'OK')));
@@ -4465,7 +4506,7 @@ KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.3","descriptio
             el('div', { className: 'kss-tools' },
                 el('button', { type: 'button', className: 'kss-icon-btn', title: 'Nach oben', 'aria-label': `${s.name} nach oben`, disabled: i === 0, onclick: () => move(-1) }, '↑'),
                 el('button', { type: 'button', className: 'kss-icon-btn', title: 'Nach unten', 'aria-label': `${s.name} nach unten`, disabled: i === searches.length - 1, onclick: () => move(1) }, '↓'),
-                el('button', { type: 'button', className: 'kss-icon-btn', title: 'Umbenennen', 'aria-label': `${s.name} umbenennen`, onclick: () => { editingId = s.id; render(); } }, '✎'),
+                el('button', { type: 'button', className: 'kss-icon-btn', title: 'Umbenennen', 'aria-label': `${s.name} umbenennen`, onclick: () => { editingId = s.id; editDraft = null; render(); } }, '✎'),
                 el('button', { type: 'button', className: 'kss-icon-btn', title: 'Löschen', 'aria-label': `${s.name} löschen`,
                     onclick: () => { if (window.confirm(`Gespeicherte Suche „${s.name}“ löschen?`)) mutate(list => { const at = list.findIndex(x => x.id === s.id); if (at >= 0) list.splice(at, 1); }); } }, '🗑')));
     }
@@ -4477,7 +4518,7 @@ KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.3","descriptio
         if (searches.length >= CONFIG.max) return el('p', { className: 'kss-hint' }, `Höchstens ${CONFIG.max} gespeicherte Suchen.`);
         if (draftName == null) draftName = suggestName();
         const input = el('input', { className: 'kss-input', type: 'text', value: draftName, maxLength: CONFIG.nameMax,
-            'aria-label': 'Name für diese Suche', oninput: (e) => { draftName = e.target.value; } });
+            'aria-label': 'Name für diese Suche', dataset: { focus: 'save' }, oninput: (e) => { draftName = e.target.value; } });
         const doSave = () => {
             const name = clip(input.value, CONFIG.nameMax) || suggestName();
             draftName = null;
@@ -4499,7 +4540,7 @@ KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.3","descriptio
             panel.remove();
             return;
         }
-        // Fokus im Panel merken (z. B. Häkchen), damit Tastaturnutzer nach dem Neuzeichnen nicht herausfallen
+        // Fokus im Panel merken (Häkchen, Namensfelder), damit beim Neuzeichnen niemand aus dem Feld fällt
         const focused = panel.contains(document.activeElement) ? document.activeElement.getAttribute('data-focus') : null;
         const list = searches.length
             ? el('ol', { className: 'kss-list' }, searches.map(itemRow))
@@ -4521,7 +4562,11 @@ KS.module("suchen", {"label":"Gespeicherte Suchen","version":"0.2.3","descriptio
         if (!panel.isConnected) document.body.appendChild(panel);
         if (focused) {
             const again = panel.querySelector(`[data-focus="${focused}"]`);
-            if (again) again.focus({ preventScroll: true });
+            if (again) {
+                again.focus({ preventScroll: true });
+                // Neu erzeugtes Textfeld: Cursor ans Ende, damit weiter getippt werden kann
+                if (again.type === 'text') again.setSelectionRange(again.value.length, again.value.length);
+            }
         }
     }
 

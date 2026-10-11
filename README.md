@@ -6,7 +6,7 @@
 
 **Alles in einem Userscript für Kleinanzeigen.de: Preisverlauf, neue und schon gesehene Anzeigen, gespeicherte Suchen, Melden aus der Übersicht und eine eigene Blockliste.**
 
-[![Version](https://img.shields.io/badge/version-0.2.3-blue?style=flat-square)](https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/superscript.user.js)
+[![Version](https://img.shields.io/badge/version-0.2.4-blue?style=flat-square)](https://github.com/RainbowLabsInc/Kleinanzeigen.de_Superscript/raw/main/superscript.user.js)
 [![Plattform](https://img.shields.io/badge/plattform-Kleinanzeigen.de-green?style=flat-square)](https://www.kleinanzeigen.de)
 [![Userscript](https://img.shields.io/badge/Tampermonkey-Violentmonkey-black?style=flat-square&logo=tampermonkey)](#%EF%B8%8F-installation)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
@@ -28,8 +28,8 @@ Wer auf Kleinanzeigen etwas Bestimmtes sucht, schaut oft tagelang dieselbe Suche
 |---|---|---|
 | 🏷️ **Preisverlauf & Gesehen** | Preisänderungen mit Datum, „Neu“ seit deinem letzten Besuch einer Suche, „Gesehen“ und „Geöffnet“, auf Wunsch abgedunkelt | nein, nur im Superscript |
 | ★ **Gespeicherte Suchen** | Sidebar mit eigenen, benannten Suchen, Umschalten per Klick oder Alt+1 … Alt+9, optional Zähler für neue Anzeigen | nein, nur im Superscript |
-| 🚩 **Anzeige melden** (0.4.5) | Button „Melden“ neben dem Preis: Anzeigen direkt aus der Übersicht melden, mit eigenen Bausteinen | [ja](https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden) |
-| 🚫 **Nutzer ausblenden** (0.3.4) | Button „Ausblenden“ neben dem Preis: Anbieter blockieren, einzelne Anzeigen ausblenden, Listen teilen und abonnieren | [ja](https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden) |
+| 🚩 **Anzeige melden** (0.4.6) | Button „Melden“ neben dem Preis: Anzeigen direkt aus der Übersicht melden, mit eigenen Bausteinen | [ja](https://github.com/RainbowLabsInc/Kleinanzeigen.de_Anzeige_melden) |
+| 🚫 **Nutzer ausblenden** (0.3.5) | Button „Ausblenden“ neben dem Preis: Anbieter blockieren, einzelne Anzeigen ausblenden, Listen teilen und abonnieren | [ja](https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden) |
 
 Die beiden übernommenen Module sind **unverändert** die jeweils aktuelle Version der Einzel-Scripts. Deren Beschreibung und Bedienung findest du in den verlinkten Projekten.
 
@@ -195,6 +195,7 @@ Kleinanzeigen ändert sein Frontend regelmäßig. Funktioniert etwas nicht, hilf
 
 | Version | Änderungen |
 |---|---|
+| **0.2.4** | „Anzeige melden“ 0.4.6 und „Nutzer ausblenden“ 0.3.5 übernommen (Fehlerbehebungen, u. a. „null“ in der Vorschau beim Zusammenführen, Abo-Einträge bei „Alle freigeben“ und „Liste ersetzen“, zuletzt benutzter Baustein). Gespeicherte Suchen: Buttons „Speichern“ und „OK“ waren schwarz auf schwarz; ein angefangener Name beim Umbenennen bzw. Speichern geht beim Neuzeichnen der Sidebar nicht mehr verloren |
 | **0.2.3** | „Anzeige melden“ 0.4.5 und „Nutzer ausblenden“ 0.3.4 übernommen: Buttons auch an Anzeigen mit „VB“ ohne Betrag oder ohne Preisangabe; Preisverlauf erfasst „VB“; Reiter „★ Suchen“ zeigte ohne neue Anzeigen „null“ |
 | **0.2.2** | „Anzeige melden“ 0.4.4 und „Nutzer ausblenden“ 0.3.3 übernommen: Melden-Button auch auf der Startseite (fehlte dort), kommt nach einem Neuaufbau der Seite zurück; „Blockieren“ auf der Anzeigenseite kompakt und rot abgesetzt |
 | **0.2.1** | „Anzeige melden“ 0.4.3 und „Nutzer ausblenden“ 0.3.2 übernommen: beide arbeiten jetzt auch auf der Startseite |

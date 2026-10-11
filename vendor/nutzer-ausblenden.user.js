@@ -5,7 +5,7 @@
 // @author        RainbowlabsInc
 // @copyright     2026, RainbowlabsInc
 // @license       MIT
-// @version       0.3.4
+// @version       0.3.5
 // @icon          https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden/raw/main/assets/icon48.png
 // @homepage      https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden
 // @updateURL     https://github.com/RainbowLabsInc/Kleinanzeigen.de-User_ausblenden/raw/main/script.user.js
@@ -66,7 +66,7 @@
 (function () {
     'use strict';
 
-    const VERSION = '0.3.4';
+    const VERSION = '0.3.5';
 
     const CONFIG = {
         keys: {
@@ -193,6 +193,9 @@
     }
 
     const isShop = (id) => id.startsWith('pro:');
+    // Eintrag aus einem (noch) abonnierten Abo. Verweist er auf ein Abo, das es nicht mehr gibt,
+    // gilt er als eigener Eintrag, damit er sichtbar bleibt und freigegeben werden kann.
+    const isSubEntry = (u) => !!(u && u.sub && state.subs[u.sub]);
     const sellerPageName = (id) => (isShop(id) ? 'Shop-Seite' : 'Bestandsliste');
 
     // Hinweisfeld (<p class="kua-note">) setzen; ohne Text wird es ausgeblendet
@@ -565,6 +568,8 @@
         showToast(`„${label}“ blockiert.`, 'ok', [undo], 8000);
         scanSeller(id).then(n => {
             refreshPage();
+            // Verwaltung offen (Anbieter dort hinzugefügt)? Zahl der bekannten Anzeigen nachziehen
+            if (panel) renderPanel();
             if (state.users[id]) {
                 showToast(`„${label}“ blockiert, ${n} Anzeige${n === 1 ? '' : 'n'} auf der ${sellerPageName(id)} gefunden.`, 'ok', [undo], 6000);
             }
@@ -631,19 +636,26 @@
     const syncing = new Set();
 
     async function syncSub(url) {
-        const sub = state.subs[url];
-        if (!sub || syncing.has(url)) return null;
+        if (!state.subs[url] || syncing.has(url)) return null;
         syncing.add(url);
         try {
-            sub.lastCheck = Date.now();
+            state.subs[url].lastCheck = Date.now();
             let list;
             try {
                 list = parseList(await fetchListText(url));
+                // Eine HTML-Seite (Anmeldung, Fehlerseite) ist keine Liste. Nicht abgleichen,
+                // sonst fielen alle Einträge des Abos weg.
+                if (!list.users.length && list.invalid) throw new Error('Unter der Adresse steht keine Blockliste (keine gültigen Einträge)');
             } catch (e) {
-                sub.error = clip(e.message, 200);
-                saveSubs();
+                if (state.subs[url]) {
+                    state.subs[url].error = clip(e.message, 200);
+                    saveSubs();
+                }
                 throw e;
             }
+            // Während des Ladens kann ein anderer Tab den Stand neu geladen haben: aktuellen nehmen
+            const sub = state.subs[url];
+            if (!sub) return null;
             const title = list.title || sub.title || new URL(url).hostname;
             const wanted = new Map(list.users.filter(u => !sub.excluded.includes(u.id)).map(u => [u.id, u]));
             const result = { added: 0, removed: 0, total: wanted.size, title };
@@ -660,8 +672,9 @@
                 }
             }
             Object.assign(sub, { title, lastSuccess: Date.now(), error: '' });
-            saveUsers();
+            // Erst das Abo, dann die Einträge: andere Tabs kennen das Abo, bevor sie die Einträge sehen
             saveSubs();
+            saveUsers();
             refreshPage();
             return result;
         } finally {
@@ -954,7 +967,7 @@
             if (blocked) {
                 parts.push(el('p', { className: 'kua-note', dataset: { kind: 'ok' } },
                     `Blockiert seit ${fmtDate(blocked.added)}${blocked.note ? ` · ${blocked.note}` : ''}`
-                    + (blocked.source ? ` · aus ${blocked.sub ? 'Abo ' : ''}„${blocked.source}“` : '')));
+                    + (blocked.source ? ` · aus ${isSubEntry(blocked) ? 'Abo ' : ''}„${blocked.source}“` : '')));
                 parts.push(el('div', { className: 'kua-row' },
                     el('span', { className: 'kua-spacer' }),
                     el('button', { type: 'button', className: 'kua-action', onclick: () => { unblockUser(uid); render(); } }, 'Anbieter freigeben')));
@@ -1369,7 +1382,7 @@
     // ------------------------------------------------------------------
 
     // Exportiert wird nur die eigene Liste (inkl. zusammengeführter Listen), keine Abo-Einträge
-    const ownUsers = () => Object.entries(state.users).filter(([, u]) => !u.sub);
+    const ownUsers = () => Object.entries(state.users).filter(([, u]) => !isSubEntry(u));
 
     function exportJson() {
         const users = ownUsers()
@@ -1415,7 +1428,11 @@
         const pushUser = (id, entry) => {
             if (seenUsers.has(id)) return;
             seenUsers.add(id);
-            out.users.push({ id, ...cleanUser(entry) });
+            // "sub" setzt nur der Abgleich eines Abos, nie die Liste selbst (sonst wäre der
+            // Eintrag nach dem Import unsichtbar)
+            const user = cleanUser(entry);
+            delete user.sub;
+            out.users.push({ id, ...user });
         };
         const addUser = (raw) => {
             const entry = typeof raw === 'string' ? { id: raw } : raw;
@@ -1469,7 +1486,8 @@
     function importList(list, opts = {}) {
         const result = { added: 0, existing: 0, ads: 0 };
         if (opts.replace) {
-            state.users = {};
+            // Ersetzt wird nur die eigene Liste; Einträge aus Abos bleiben
+            Object.keys(state.users).forEach(id => { if (!isSubEntry(state.users[id])) delete state.users[id]; });
             state.ads = {};
         }
         const source = clip(opts.source, CONFIG.sourceMax);
@@ -1551,7 +1569,7 @@
         if (!panel) return;
         const { box } = panel;
         const scrollTop = box.scrollTop;
-        const ids = Object.keys(state.users).filter(id => !state.users[id].sub);
+        const ids = Object.keys(state.users).filter(id => !isSubEntry(state.users[id]));
         const adCounts = {};
         Object.values(state.index).forEach(uid => { if (state.users[uid]) adCounts[uid] = (adCounts[uid] || 0) + 1; });
 
@@ -1645,10 +1663,10 @@
         const fileInput = el('input', { type: 'file', accept: '.json,.txt,application/json,text/plain', hidden: true,
             onchange: async (e) => {
                 const file = e.target.files && e.target.files[0];
+                e.target.value = ''; // dieselbe Datei lässt sich so erneut wählen
                 if (!file) return;
                 if (file.size > 2 * 1024 * 1024) { showIo('Die Datei ist zu groß (max. 2 MB).', 'error'); return; }
                 startPreview(await file.text(), file.name.replace(/\.(json|txt)$/i, ''));
-                e.target.value = '';
             } });
 
         const previewBox = el('div', { className: 'kua-preview', hidden: true });
@@ -1705,7 +1723,8 @@
                 if (r.added) refreshBlockedSellers().then(() => renderPanel());
             });
 
-            previewBox.replaceChildren(
+            // replaceChildren() setzt null als Text "null" ein, darum vorher herausfiltern
+            previewBox.replaceChildren(...[
                 el('p', { className: 'kua-note' }, summary),
                 modeRadio(false, 'Zu meiner Liste hinzufügen (empfohlen): deine Einträge bleiben, nur neue Anbieter kommen dazu'),
                 modeRadio(true, 'Meine Liste ersetzen: die bisherige Blockliste wird gelöscht'),
@@ -1725,7 +1744,8 @@
                 el('div', { className: 'kua-row' },
                     el('span', { className: 'kua-spacer' }),
                     el('button', { type: 'button', className: 'kua-action', onclick: () => { panel.preview = null; drawPreview(); } }, 'Abbrechen'),
-                    mergeBtn));
+                    mergeBtn),
+            ].filter(Boolean));
             updateMergeBtn();
         };
         drawPreview();
@@ -1735,7 +1755,11 @@
         ids.forEach(id => { const src = state.users[id].source; if (src) sources[src] = (sources[src] || 0) + 1; });
         const removeSource = (src) => {
             let n = 0;
-            Object.keys(state.users).forEach(id => { if (state.users[id].source === src) { delete state.users[id]; n++; } });
+            // Nur übernommene Einträge; ein Abo mit gleichem Namen bleibt unberührt
+            Object.keys(state.users).forEach(id => {
+                const u = state.users[id];
+                if (u.source === src && !isSubEntry(u)) { delete state.users[id]; n++; }
+            });
             saveUsers();
             refreshPage();
             renderPanel();
@@ -1754,7 +1778,7 @@
         const subUrl = el('input', { className: 'kua-input', type: 'url', placeholder: 'https://… (Adresse der Liste)', 'aria-label': 'Adresse der Liste' });
         const subStatus = el('p', { className: 'kua-note', role: 'status', hidden: true });
         const subCounts = {};
-        Object.values(state.users).forEach(u => { if (u.sub) subCounts[u.sub] = (subCounts[u.sub] || 0) + 1; });
+        Object.values(state.users).forEach(u => { if (isSubEntry(u)) subCounts[u.sub] = (subCounts[u.sub] || 0) + 1; });
         const subResultText = (r) => `„${r.title}“: ${r.total} Anbieter in der Liste`
             + (r.added || r.removed ? ` (${r.added} neu, ${r.removed} entfernt)` : ', keine Änderungen') + '.';
         const doSubscribe = async () => {
@@ -1762,10 +1786,13 @@
             if (!url) { setNote(subStatus, 'Bitte eine vollständige https-Adresse angeben, z. B. https://raw.githubusercontent.com/…/liste.txt.', 'error'); return; }
             if (state.subs[url]) { setNote(subStatus, 'Diese Liste ist bereits abonniert.', 'ok'); return; }
             state.subs[url] = { title: '', added: Date.now(), lastCheck: 0, lastSuccess: 0, error: '', excluded: [] };
+            // Gleich speichern: lädt ein anderer Tab währenddessen den Stand neu, bleibt das Abo erhalten
+            saveSubs();
             setNote(subStatus, 'Liste wird geladen …');
             try {
                 const r = await syncSub(url);
                 renderPanel();
+                if (!r) return;
                 showPanelNote(`Abonniert: ${subResultText(r)}`
                     + (r.added ? ` Die Anzeigen der neuen Anbieter werden nach und nach eingelesen (bis zu ${CONFIG.refreshPerVisit} Anbieter pro Seitenaufruf).` : ''), 'ok');
                 if (r.added) refreshBlockedSellers().then(() => renderPanel());
