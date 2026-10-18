@@ -33,6 +33,8 @@ Wer auf Kleinanzeigen etwas Bestimmtes sucht, schaut oft tagelang dieselbe Suche
 
 Die beiden übernommenen Module sind **unverändert** die jeweils aktuelle Version der Einzel-Scripts. Deren Beschreibung und Bedienung findest du in den verlinkten Projekten.
 
+> **Du verkaufst auch viel?** Dafür gibt es den [PowerSeller](https://github.com/RainbowLabsInc/Kleinanzeigen_Power_Seller_Skript): Bausteine für Nachrichten und Anzeigentexte, Warnung vor Betrugsmaschen, Besucher-Verlauf unter „Meine Anzeigen“ und ein Verkaufsbuch. Er läuft auf anderen Seiten als das Superscript, beide vertragen sich.
+
 **Auch auf der Startseite:** Dort blendet die Blockliste Anzeigen blockierter Anbieter aus, an jeder Anzeige sitzen „Melden“ und „Ausblenden“, der Preisverlauf markiert Preisänderungen und schon gesehene Anzeigen (ohne „Neu“, denn die Startseite ist keine Suche), und die Sidebar der gespeicherten Suchen ist da.
 
 <p align="center">
